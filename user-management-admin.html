@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>User Management — Security Policy Admin</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f6f7f9; }
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+    input:focus, select:focus { outline: 2px solid #2563eb33; }
+    button:hover:not(:disabled) { opacity: 0.85; }
+    button:disabled { cursor: default; opacity: 0.4; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .dot-green { background: #22c55e; }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .dot-gray { background: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useCallback, Fragment } = React;
+
+    // ─── Data ────────────────────────────────────────────────
+
+    const ROLES_LIST = ["All Users", "super_admin", "user_admin", "auditor"];
+
+    const DEFAULT_PP = { minLength: 12, requireUppercase: true, requireLowercase: true, requireDigit: true, requireSpecial: true, historyDepth: 5, maxAgeDays: 90, minAgeDays: 1 };
+    const DEFAULT_LP = { durationMinutes: 30, thresholdAttempts: 5, resetAfterMinutes: 15 };
+
+    const DEFAULT_ROLES = [
+      { id: 1, name: "super_admin", description: "Full system access", dedicatedAdmin: true, maxMembers: 3 },
+      { id: 2, name: "user_admin", description: "Manage users & passwords", dedicatedAdmin: true, maxMembers: 10 },
+      { id: 3, name: "auditor", description: "Read-only audit access", dedicatedAdmin: false, maxMembers: 0 },
+    ];
+
+    const DEFAULT_GROUPS = [
+      { id: 1, name: "super_admins", description: "Highest privilege group" },
+      { id: 2, name: "billing_admins", description: "Financial operations" },
+      { id: 3, name: "security_officers", description: "Security policy management" },
+    ];
+
+    const PRIVILEGES = [
+      { key: "manage_users", label: "Manage Users", hint: "Create, edit, delete user accounts" },
+      { key: "reset_passwords", label: "Reset Passwords", hint: "Force password resets for users" },
+      { key: "unlock_accounts", label: "Unlock Accounts", hint: "Unlock locked-out accounts" },
+      { key: "edit_policies", label: "Edit Policies", hint: "Modify password & lockout policies" },
+      { key: "manage_roles", label: "Manage Roles", hint: "Assign and revoke admin roles" },
+      { key: "view_audit_log", label: "View Audit Log", hint: "Read-only access to audit trail" },
+      { key: "manage_groups", label: "Manage Protected Groups", hint: "Add/remove protected group members" },
+      { key: "billing_access", label: "Billing Access", hint: "View and manage billing" },
+    ];
+
+    const DEFAULT_ADMINS = [
+      { id: 1, email: "admin@company.com", name: "Primary Admin", role: "super_admin", privileges: ["manage_users", "reset_passwords", "unlock_accounts", "edit_policies", "manage_roles", "view_audit_log", "manage_groups", "billing_access"] },
+      { id: 2, email: "useradmin@company.com", name: "User Admin", role: "user_admin", privileges: ["manage_users", "reset_passwords", "unlock_accounts", "view_audit_log"] },
+    ];
+
+    const MOCK_USERS = [
+      { id: "u1", name: "Alice Chen", email: "alice@company.com", status: "active", role: "super_admin", lastLogin: "2026-02-28 14:32", pwLastChanged: "2026-02-01", pwExpires: "2026-05-02", mustChange: false, failedAttempts: 0, locked: false, mfaEnabled: true,
+        privileges: ["manage_users", "reset_passwords", "unlock_accounts", "edit_policies", "manage_roles", "view_audit_log", "manage_groups", "billing_access"],
+        sessions: [
+          { id: "s1", ip: "10.0.1.42", device: "Chrome / macOS", location: "San Francisco, US", startedAt: "2026-02-28 14:32", active: true },
+          { id: "s2", ip: "10.0.1.42", device: "Claude Mobile / iOS", location: "San Francisco, US", startedAt: "2026-02-28 09:15", active: true },
+        ],
+        loginHistory: [
+          { time: "2026-02-28 14:32", success: true, ip: "10.0.1.42", device: "Chrome / macOS" },
+          { time: "2026-02-28 09:15", success: true, ip: "10.0.1.42", device: "Mobile / iOS" },
+          { time: "2026-02-27 16:45", success: true, ip: "10.0.1.42", device: "Chrome / macOS" },
+          { time: "2026-02-27 08:20", success: false, ip: "203.0.113.5", device: "Firefox / Windows" },
+        ],
+        accessLog: [
+          { time: "2026-02-20 10:00", action: "granted", item: "billing_access", by: "admin01" },
+          { time: "2026-01-15 09:30", action: "granted", item: "super_admin role", by: "system" },
+          { time: "2026-01-15 09:30", action: "granted", item: "All privileges", by: "system" },
+        ]
+      },
+      { id: "u2", name: "Bob Martinez", email: "bob@company.com", status: "active", role: "user_admin", lastLogin: "2026-02-28 11:20", pwLastChanged: "2026-01-15", pwExpires: "2026-04-15", mustChange: false, failedAttempts: 1, locked: false, mfaEnabled: true,
+        privileges: ["manage_users", "reset_passwords", "unlock_accounts", "view_audit_log"],
+        sessions: [
+          { id: "s3", ip: "192.168.1.100", device: "Edge / Windows", location: "Austin, US", startedAt: "2026-02-28 11:20", active: true },
+        ],
+        loginHistory: [
+          { time: "2026-02-28 11:20", success: true, ip: "192.168.1.100", device: "Edge / Windows" },
+          { time: "2026-02-28 11:18", success: false, ip: "192.168.1.100", device: "Edge / Windows" },
+          { time: "2026-02-27 09:00", success: true, ip: "192.168.1.100", device: "Edge / Windows" },
+        ],
+        accessLog: [
+          { time: "2026-02-10 14:00", action: "revoked", item: "edit_policies", by: "alice@company.com" },
+          { time: "2026-01-15 09:30", action: "granted", item: "user_admin role", by: "system" },
+          { time: "2026-01-15 09:30", action: "granted", item: "manage_users, reset_passwords, unlock_accounts, view_audit_log", by: "system" },
+        ]
+      },
+      { id: "u3", name: "Carol White", email: "carol@company.com", status: "locked", role: "auditor", lastLogin: "2026-02-27 16:10", pwLastChanged: "2025-11-20", pwExpires: "2026-02-18", mustChange: true, failedAttempts: 5, locked: true, mfaEnabled: false,
+        privileges: ["view_audit_log"],
+        sessions: [],
+        loginHistory: [
+          { time: "2026-02-28 10:05", success: false, ip: "203.0.113.99", device: "Safari / macOS" },
+          { time: "2026-02-28 10:04", success: false, ip: "203.0.113.99", device: "Safari / macOS" },
+          { time: "2026-02-28 10:03", success: false, ip: "203.0.113.99", device: "Safari / macOS" },
+          { time: "2026-02-28 10:02", success: false, ip: "203.0.113.99", device: "Safari / macOS" },
+          { time: "2026-02-28 10:01", success: false, ip: "203.0.113.99", device: "Safari / macOS" },
+          { time: "2026-02-27 16:10", success: true, ip: "10.0.2.15", device: "Safari / macOS" },
+        ],
+        accessLog: [
+          { time: "2026-01-20 11:00", action: "granted", item: "auditor role", by: "alice@company.com" },
+          { time: "2026-01-20 11:00", action: "granted", item: "view_audit_log", by: "alice@company.com" },
+        ]
+      },
+      { id: "u4", name: "Dan Kim", email: "dan@company.com", status: "disabled", role: "—", lastLogin: "2026-01-10 09:30", pwLastChanged: "2025-10-05", pwExpires: "2026-01-03", mustChange: false, failedAttempts: 0, locked: false, mfaEnabled: false,
+        privileges: [],
+        sessions: [],
+        loginHistory: [
+          { time: "2026-01-10 09:30", success: true, ip: "10.0.3.22", device: "Chrome / Linux" },
+        ],
+        accessLog: [
+          { time: "2026-02-01 08:00", action: "revoked", item: "All access — account disabled", by: "alice@company.com" },
+          { time: "2025-09-01 10:00", action: "granted", item: "auditor role", by: "system" },
+        ]
+      },
+      { id: "u5", name: "Eve Patel", email: "eve@company.com", status: "active", role: "user_admin", lastLogin: "2026-02-28 13:50", pwLastChanged: "2026-02-25", pwExpires: "2026-05-26", mustChange: false, failedAttempts: 0, locked: false, mfaEnabled: true,
+        privileges: ["manage_users", "reset_passwords", "view_audit_log"],
+        sessions: [
+          { id: "s5", ip: "10.0.4.88", device: "Chrome / Windows", location: "London, UK", startedAt: "2026-02-28 13:50", active: true },
+        ],
+        loginHistory: [
+          { time: "2026-02-28 13:50", success: true, ip: "10.0.4.88", device: "Chrome / Windows" },
+          { time: "2026-02-27 14:20", success: true, ip: "10.0.4.88", device: "Chrome / Windows" },
+        ],
+        accessLog: [
+          { time: "2026-02-15 09:00", action: "revoked", item: "unlock_accounts", by: "alice@company.com" },
+          { time: "2026-01-20 11:00", action: "granted", item: "user_admin role", by: "alice@company.com" },
+          { time: "2026-01-20 11:00", action: "granted", item: "manage_users, reset_passwords, unlock_accounts, view_audit_log", by: "alice@company.com" },
+        ]
+      },
+    ];
+
+    // ─── Primitives ──────────────────────────────────────────
+
+    function Toggle({ value, onChange, disabled }) {
+      return (
+        <div onClick={disabled ? undefined : () => onChange(!value)}
+          style={{ width: 40, height: 22, borderRadius: 11, position: "relative", cursor: disabled ? "default" : "pointer", background: value ? "#2563eb" : "#cbd5e1", transition: "background .2s", opacity: disabled ? 0.35 : 1 }}>
+          <div style={{ width: 18, height: 18, borderRadius: 9, background: "#fff", position: "absolute", top: 2, left: value ? 20 : 2, transition: "left .2s", boxShadow: "0 1px 3px rgba(0,0,0,.12)" }} />
+        </div>
+      );
+    }
+
+    function Stepper({ value, onChange, min = 0, max = 999, disabled, suffix }) {
+      const btn = (side) => ({ width: 32, height: 32, border: "1px solid #e2e8f0", background: "#f8fafc", cursor: disabled ? "default" : "pointer", fontSize: 15, color: "#475569", display: "flex", alignItems: "center", justifyContent: "center", borderRadius: side === "l" ? "6px 0 0 6px" : "0 6px 6px 0" });
+      return (
+        <div style={{ display: "flex", alignItems: "center", gap: 0, opacity: disabled ? 0.35 : 1 }}>
+          <button disabled={disabled || value <= min} onClick={() => onChange(Math.max(min, value - 1))} style={btn("l")}>−</button>
+          <input type="number" value={value} min={min} max={max} disabled={disabled}
+            onChange={e => { const v = parseInt(e.target.value); if (!isNaN(v)) onChange(Math.min(max, Math.max(min, v))); }}
+            style={{ width: 52, textAlign: "center", border: "1px solid #e2e8f0", borderLeft: 0, borderRight: 0, height: 32, fontSize: 13, fontFamily: "monospace", background: "#fff", color: "#0f172a" }} />
+          <button disabled={disabled || value >= max} onClick={() => onChange(Math.min(max, value + 1))} style={btn("r")}>+</button>
+          {suffix && <span style={{ fontSize: 11.5, color: "#94a3b8", marginLeft: 8 }}>{suffix}</span>}
+        </div>
+      );
+    }
+
+    function Row({ label, hint, children }) {
+      return (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "13px 0", borderBottom: "1px solid #f1f5f9" }}>
+          <div><div style={{ fontSize: 13.5, color: "#0f172a", fontWeight: 500 }}>{label}</div>{hint && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{hint}</div>}</div>
+          <div style={{ flexShrink: 0 }}>{children}</div>
+        </div>
+      );
+    }
+
+    function Card({ title, badge, children }) {
+      return (
+        <div style={{ background: "#fff", border: "1px solid #e8ecf1", borderRadius: 10, marginBottom: 20 }}>
+          <div style={{ padding: "14px 20px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <h3 style={{ fontSize: 13.5, fontWeight: 600, color: "#0f172a", margin: 0 }}>{title}</h3>
+            {badge}
+          </div>
+          <div style={{ padding: "4px 20px 16px" }}>{children}</div>
+        </div>
+      );
+    }
+
+    function StatusDot({ status }) {
+      const map = { active: "dot-green", locked: "dot-red", disabled: "dot-gray", expired: "dot-yellow" };
+      return <span className={"dot " + (map[status] || "dot-gray")} />;
+    }
+
+    function StatusBadge({ status }) {
+      const colors = { active: { bg: "#ecfdf5", fg: "#059669" }, locked: { bg: "#fef2f2", fg: "#dc2626" }, disabled: { bg: "#f1f5f9", fg: "#64748b" }, expired: { bg: "#fffbeb", fg: "#d97706" } };
+      const c = colors[status] || colors.disabled;
+      return <span style={{ fontSize: 11, fontWeight: 600, padding: "2px 10px", borderRadius: 10, background: c.bg, color: c.fg, textTransform: "uppercase", letterSpacing: 0.3 }}>{status}</span>;
+    }
+
+    function ActionBadge({ action }) {
+      const c = action === "granted" ? { bg: "#ecfdf5", fg: "#059669" } : { bg: "#fef2f2", fg: "#dc2626" };
+      return <span style={{ fontSize: 10.5, fontWeight: 600, padding: "2px 8px", borderRadius: 4, background: c.bg, color: c.fg, textTransform: "uppercase" }}>{action}</span>;
+    }
+
+    // ─── Styles ──────────────────────────────────────────────
+
+    const saveBtn = { padding: "9px 22px", fontSize: 13, fontWeight: 600, color: "#fff", background: "#0f172a", border: "none", borderRadius: 7, cursor: "pointer" };
+    const tbl = { width: "100%", borderCollapse: "collapse" };
+    const thS = { textAlign: "left", padding: "8px 10px", fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.4, borderBottom: "1px solid #e8ecf1" };
+    const tdS = { padding: "10px 10px", borderBottom: "1px solid #f1f5f9", verticalAlign: "middle", fontSize: 13 };
+    const codeS = { fontSize: 12, background: "#f1f5f9", padding: "2px 7px", borderRadius: 3, fontFamily: "monospace" };
+    const linkBtn = { fontSize: 12, color: "#2563eb", background: "none", border: "none", cursor: "pointer", fontWeight: 500, padding: 0 };
+    const fieldLabel = { display: "block", fontSize: 11, fontWeight: 600, color: "#64748b", marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.3 };
+    const fieldInput = { width: "100%", padding: "7px 10px", fontSize: 13, border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff", color: "#0f172a", boxSizing: "border-box" };
+    const dangerBtn = { padding: "5px 12px", fontSize: 12, fontWeight: 500, color: "#dc2626", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 5, cursor: "pointer" };
+    const smallBtn = { padding: "5px 12px", fontSize: 12, fontWeight: 500, color: "#fff", background: "#2563eb", border: "none", borderRadius: 5, cursor: "pointer" };
+    const mono = { fontFamily: "monospace", fontSize: 12, color: "#64748b" };
+
+    // ─── Tabs ────────────────────────────────────────────────
+
+    const TABS = [
+      { key: "password", label: "Password Policy", section: "Policy" },
+      { key: "lockout", label: "Account Lockout", section: "Policy" },
+      { key: "admins", label: "Admin Controls", section: "Policy" },
+      { key: "users", label: "Users", section: "Monitor" },
+      { key: "sessions", label: "Active Sessions", section: "Monitor" },
+      { key: "access", label: "Access Log", section: "Monitor" },
+    ];
+
+    // ─── App ─────────────────────────────────────────────────
+
+    function App() {
+      const [tab, setTab] = useState("users");
+      const [policies, setPolicies] = useState({ "All Users": { ...DEFAULT_PP } });
+      const [selectedRole, setSelectedRole] = useState("All Users");
+      const [lp, setLp] = useState(DEFAULT_LP);
+      const [roles, setRoles] = useState(DEFAULT_ROLES);
+      const [groups, setGroups] = useState(DEFAULT_GROUPS);
+      const [admins, setAdmins] = useState(DEFAULT_ADMINS);
+      const [showAddAdmin, setShowAddAdmin] = useState(false);
+      const [newAdmin, setNewAdmin] = useState({ email: "", name: "", role: "user_admin", privileges: [] });
+      const [editingPrivs, setEditingPrivs] = useState(null);
+      const [saved, setSaved] = useState(null);
+      const [users, setUsers] = useState(MOCK_USERS);
+      const [selectedUser, setSelectedUser] = useState(null);
+      const [userSearch, setUserSearch] = useState("");
+      const [statusFilter, setStatusFilter] = useState("all");
+      const [grantingAccess, setGrantingAccess] = useState(false);
+      const [accessFilter, setAccessFilter] = useState("all");
+
+      const flash = useCallback((msg) => { setSaved(msg); setTimeout(() => setSaved(null), 2000); }, []);
+
+      const pp = policies[selectedRole] || { ...DEFAULT_PP };
+      const ppSet = (k, v) => setPolicies(p => ({ ...p, [selectedRole]: { ...(p[selectedRole] || DEFAULT_PP), [k]: v } }));
+      const lpSet = (k, v) => setLp(p => ({ ...p, [k]: v }));
+
+      const handleRoleSwitch = (role) => { setSelectedRole(role); if (!policies[role]) setPolicies(p => ({ ...p, [role]: { ...DEFAULT_PP } })); };
+
+      const addAdmin = () => {
+        if (!newAdmin.email.trim() || !newAdmin.name.trim()) return;
+        setAdmins(a => [...a, { ...newAdmin, id: Date.now() }]);
+        setNewAdmin({ email: "", name: "", role: "user_admin", privileges: [] });
+        setShowAddAdmin(false);
+        flash('Admin "' + newAdmin.name + '" added');
+      };
+
+      const removeAdmin = (id) => { const a = admins.find(x => x.id === id); setAdmins(as => as.filter(x => x.id !== id)); flash((a ? a.name : "Admin") + " removed"); };
+
+      const togglePriv = (adminId, priv) => {
+        setAdmins(as => as.map(a => {
+          if (a.id !== adminId) return a;
+          const has = a.privileges.includes(priv);
+          return { ...a, privileges: has ? a.privileges.filter(p => p !== priv) : [...a.privileges, priv] };
+        }));
+      };
+
+      // User actions
+      const unlockUser = (userId) => {
+        setUsers(us => us.map(u => u.id === userId ? { ...u, locked: false, status: "active", failedAttempts: 0 } : u));
+        flash("Account unlocked");
+      };
+
+      const disableUser = (userId) => {
+        setUsers(us => us.map(u => u.id === userId ? { ...u, status: "disabled", sessions: [], privileges: [] } : u));
+        flash("Account disabled");
+      };
+
+      const enableUser = (userId) => {
+        setUsers(us => us.map(u => u.id === userId ? { ...u, status: "active" } : u));
+        flash("Account enabled");
+      };
+
+      const forcePasswordReset = (userId) => {
+        setUsers(us => us.map(u => u.id === userId ? { ...u, mustChange: true } : u));
+        flash("Password reset forced");
+      };
+
+      const killSession = (userId, sessionId) => {
+        setUsers(us => us.map(u => u.id === userId ? { ...u, sessions: u.sessions.filter(s => s.id !== sessionId) } : u));
+        flash("Session terminated");
+      };
+
+      const grantPrivilege = (userId, priv) => {
+        setUsers(us => us.map(u => {
+          if (u.id !== userId || u.privileges.includes(priv)) return u;
+          const newLog = { time: new Date().toISOString().replace("T", " ").slice(0, 16), action: "granted", item: priv, by: "you" };
+          return { ...u, privileges: [...u.privileges, priv], accessLog: [newLog, ...u.accessLog] };
+        }));
+        flash("Privilege granted");
+      };
+
+      const revokePrivilege = (userId, priv) => {
+        setUsers(us => us.map(u => {
+          if (u.id !== userId) return u;
+          const newLog = { time: new Date().toISOString().replace("T", " ").slice(0, 16), action: "revoked", item: priv, by: "you" };
+          return { ...u, privileges: u.privileges.filter(p => p !== priv), accessLog: [newLog, ...u.accessLog] };
+        }));
+        flash("Privilege revoked");
+      };
+
+      const filteredUsers = users.filter(u => {
+        const matchSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.email.toLowerCase().includes(userSearch.toLowerCase());
+        const matchStatus = statusFilter === "all" || u.status === statusFilter;
+        return matchSearch && matchStatus;
+      });
+
+      const allSessions = users.flatMap(u => u.sessions.filter(s => s.active).map(s => ({ ...s, userName: u.name, userEmail: u.email, userId: u.id, userStatus: u.status })));
+
+      const allAccessLogs = users.flatMap(u => u.accessLog.map(a => ({ ...a, userName: u.name, userId: u.id }))).sort((a, b) => b.time.localeCompare(a.time));
+      const filteredAccessLogs = accessFilter === "all" ? allAccessLogs : allAccessLogs.filter(a => a.action === accessFilter);
+
+      const su = selectedUser ? users.find(u => u.id === selectedUser) : null;
+
+      const sections = [...new Set(TABS.map(t => t.section))];
+
+      return (
+        <div style={{ minHeight: "100vh", background: "#f6f7f9" }}>
+          {/* Header */}
+          <div style={{ background: "#fff", borderBottom: "1px solid #e8ecf1", padding: "16px 28px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>User Management</div>
+              <div style={{ fontSize: 11, color: "#94a3b8" }}>Security Policy Administration</div>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {saved && <div style={{ fontSize: 12, color: "#059669", background: "#ecfdf5", padding: "5px 12px", borderRadius: 6, fontWeight: 500 }}>✓ {saved}</div>}
+              <div style={{ fontSize: 11, color: "#64748b" }}>
+                <span className="dot dot-green" />{allSessions.length} active session{allSessions.length !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", maxWidth: 980, margin: "0 auto", padding: "24px 20px" }}>
+            {/* Sidebar */}
+            <nav style={{ width: 185, flexShrink: 0, marginRight: 20 }}>
+              {sections.map(sec => (
+                <Fragment key={sec}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: 0.8, padding: "12px 12px 4px", marginTop: sec !== sections[0] ? 8 : 0 }}>{sec}</div>
+                  {TABS.filter(t => t.section === sec).map(t => (
+                    <div key={t.key} onClick={() => { setTab(t.key); setSelectedUser(null); }} style={{
+                      padding: "8px 12px", borderRadius: 7, cursor: "pointer", marginBottom: 1, fontSize: 13,
+                      fontWeight: tab === t.key ? 600 : 400, color: tab === t.key ? "#0f172a" : "#64748b",
+                      background: tab === t.key ? "#fff" : "transparent", border: tab === t.key ? "1px solid #e8ecf1" : "1px solid transparent",
+                    }}>
+                      {t.label}
+                    </div>
+                  ))}
+                </Fragment>
+              ))}
+            </nav>
+
+            {/* Content */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+
+              {/* ── PASSWORD POLICY ── */}
+              {tab === "password" && (
+                <Fragment>
+                  <Card title="Enforce On Role">
+                    <Row label="Apply this policy to" hint="Configure different password rules per role">
+                      <select value={selectedRole} onChange={e => handleRoleSwitch(e.target.value)} style={{ padding: "6px 12px", fontSize: 13, border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff", color: "#0f172a", minWidth: 160 }}>
+                        {ROLES_LIST.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </Row>
+                  </Card>
+                  <Card title="Password Policy">
+                    <Row label="Minimum password length"><Stepper value={pp.minLength} onChange={v => ppSet("minLength", v)} min={4} max={128} suffix="chars" /></Row>
+                    <div style={{ padding: "13px 0", borderBottom: "1px solid #f1f5f9" }}>
+                      <div style={{ fontSize: 13.5, color: "#0f172a", fontWeight: 500, marginBottom: 10 }}>Complexity requirements</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 32px" }}>
+                        {[["Uppercase letter (A–Z)", "requireUppercase"], ["Lowercase letter (a–z)", "requireLowercase"], ["Digit (0–9)", "requireDigit"], ["Special character (!@#$…)", "requireSpecial"]].map(([l, k]) => (
+                          <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontSize: 12.5, color: "#334155" }}>{l}</span>
+                            <Toggle value={pp[k]} onChange={v => ppSet(k, v)} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <Row label="Password history" hint="No same password for past 5 consecutively"><Stepper value={pp.historyDepth} onChange={v => ppSet("historyDepth", v)} min={0} max={50} /></Row>
+                    <Row label="Maximum password age"><Stepper value={pp.maxAgeDays} onChange={v => ppSet("maxAgeDays", v)} min={0} max={365} suffix="days" /></Row>
+                    <Row label="Minimum password age"><Stepper value={pp.minAgeDays} onChange={v => ppSet("minAgeDays", v)} min={0} max={30} suffix="days" /></Row>
+                    <Row label="Store password using reversible encryption" hint="Permanently disabled — database enforced">
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Toggle value={false} onChange={() => {}} disabled={true} /><span style={{ fontSize: 11, color: "#dc2626", fontWeight: 500 }}>🔒 Disabled</span></div>
+                    </Row>
+                  </Card>
+                  <button onClick={() => flash('Policy saved for "' + selectedRole + '"')} style={saveBtn}>Save Policy</button>
+                </Fragment>
+              )}
+
+              {/* ── ACCOUNT LOCKOUT ── */}
+              {tab === "lockout" && (
+                <Fragment>
+                  <Card title="Account Lockout Policy">
+                    <Row label="Lockout duration"><Stepper value={lp.durationMinutes} onChange={v => lpSet("durationMinutes", v)} min={0} max={1440} suffix="minutes" /></Row>
+                    <Row label="Lockout threshold"><Stepper value={lp.thresholdAttempts} onChange={v => lpSet("thresholdAttempts", v)} min={1} max={100} suffix="attempts" /></Row>
+                    <Row label="Reset counter after"><Stepper value={lp.resetAfterMinutes} onChange={v => lpSet("resetAfterMinutes", v)} min={1} max={120} suffix="minutes" /></Row>
+                  </Card>
+                  <button onClick={() => flash("Lockout policy saved")} style={saveBtn}>Save Policy</button>
+                </Fragment>
+              )}
+
+              {/* ── ADMIN CONTROLS ── */}
+              {tab === "admins" && (
+                <Fragment>
+                  <Card title="Admin Accounts">
+                    <table style={tbl}>
+                      <thead><tr>{["Admin", "Role", "Privileges", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {admins.map(a => (
+                          <Fragment key={a.id}>
+                            <tr>
+                              <td style={tdS}><div style={{ fontWeight: 500, fontSize: 13 }}>{a.name}</div><div style={{ fontSize: 11.5, color: "#94a3b8" }}>{a.email}</div></td>
+                              <td style={tdS}><code style={codeS}>{a.role}</code></td>
+                              <td style={tdS}>
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                                  {a.privileges.length === 0 && <span style={{ fontSize: 11, color: "#94a3b8" }}>No privileges</span>}
+                                  {a.privileges.map(p => <span key={p} style={{ fontSize: 10.5, background: "#eff6ff", color: "#2563eb", padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>{(PRIVILEGES.find(x => x.key === p) || {}).label || p}</span>)}
+                                </div>
+                              </td>
+                              <td style={{ ...tdS, whiteSpace: "nowrap" }}>
+                                <button onClick={() => setEditingPrivs(editingPrivs === a.id ? null : a.id)} style={linkBtn}>{editingPrivs === a.id ? "Done" : "Edit"}</button>
+                                <button onClick={() => removeAdmin(a.id)} style={{ ...linkBtn, color: "#dc2626", marginLeft: 8 }}>Remove</button>
+                              </td>
+                            </tr>
+                            {editingPrivs === a.id && (
+                              <tr>
+                                <td colSpan={4} style={{ padding: "0 10px 14px", borderBottom: "1px solid #f1f5f9" }}>
+                                  <div style={{ background: "#f8fafc", borderRadius: 8, padding: "12px 16px", border: "1px solid #e8ecf1" }}>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 10 }}>Privileges for {a.name}</div>
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 24px" }}>
+                                      {PRIVILEGES.map(p => (
+                                        <label key={p.key} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "5px 0" }}>
+                                          <input type="checkbox" checked={a.privileges.includes(p.key)} onChange={() => togglePriv(a.id, p.key)} style={{ accentColor: "#2563eb", width: 15, height: 15 }} />
+                                          <div><div style={{ fontSize: 12.5, color: "#0f172a", fontWeight: 500 }}>{p.label}</div><div style={{ fontSize: 10.5, color: "#94a3b8" }}>{p.hint}</div></div>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        ))}
+                      </tbody>
+                    </table>
+                    {!showAddAdmin ? (
+                      <button onClick={() => setShowAddAdmin(true)} style={{ ...linkBtn, marginTop: 12, fontSize: 13 }}>+ Add Admin Account</button>
+                    ) : (
+                      <div style={{ marginTop: 12, background: "#f8fafc", borderRadius: 8, padding: "16px", border: "1px solid #e8ecf1" }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 12 }}>New Admin Account</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 16px" }}>
+                          <div><label style={fieldLabel}>Name</label><input value={newAdmin.name} onChange={e => setNewAdmin(n => ({ ...n, name: e.target.value }))} placeholder="Full name" style={fieldInput} /></div>
+                          <div><label style={fieldLabel}>Email</label><input value={newAdmin.email} onChange={e => setNewAdmin(n => ({ ...n, email: e.target.value }))} placeholder="admin@company.com" type="email" style={fieldInput} /></div>
+                          <div><label style={fieldLabel}>Role</label><select value={newAdmin.role} onChange={e => setNewAdmin(n => ({ ...n, role: e.target.value }))} style={fieldInput}>{DEFAULT_ROLES.map(r => <option key={r.name} value={r.name}>{r.name}</option>)}</select></div>
+                        </div>
+                        <div style={{ marginTop: 12 }}>
+                          <label style={fieldLabel}>Privileges</label>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 24px", marginTop: 4 }}>
+                            {PRIVILEGES.map(p => (
+                              <label key={p.key} style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", padding: "4px 0" }}>
+                                <input type="checkbox" checked={newAdmin.privileges.includes(p.key)} onChange={() => setNewAdmin(n => ({ ...n, privileges: n.privileges.includes(p.key) ? n.privileges.filter(x => x !== p.key) : [...n.privileges, p.key] }))} style={{ accentColor: "#2563eb", width: 15, height: 15 }} />
+                                <span style={{ fontSize: 12.5, color: "#0f172a" }}>{p.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+                          <button onClick={addAdmin} disabled={!newAdmin.email.trim() || !newAdmin.name.trim()} style={{ ...saveBtn, opacity: (!newAdmin.email.trim() || !newAdmin.name.trim()) ? 0.4 : 1 }}>Add Admin</button>
+                          <button onClick={() => { setShowAddAdmin(false); setNewAdmin({ email: "", name: "", role: "user_admin", privileges: [] }); }} style={{ ...saveBtn, background: "#fff", color: "#64748b", border: "1px solid #e2e8f0" }}>Cancel</button>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                  <Card title="Separate Admin Accounts">
+                    <table style={tbl}><thead><tr>{["Role", "Separate Admin Account", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>{roles.map(r => <tr key={r.id}><td style={tdS}><code style={codeS}>{r.name}</code></td><td style={tdS}><Toggle value={r.dedicatedAdmin} onChange={v => setRoles(rs => rs.map(x => x.id === r.id ? { ...x, dedicatedAdmin: v } : x))} /></td><td style={{ ...tdS, fontSize: 11, color: "#94a3b8" }}>{r.dedicatedAdmin ? "Dedicated admin-only account" : "Regular user account"}</td></tr>)}</tbody>
+                    </table>
+                  </Card>
+                  <Card title="Admin Membership Strictly Limited">
+                    <table style={tbl}><thead><tr>{["Role", "Max Members"].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>{roles.map(r => <tr key={r.id}><td style={tdS}><code style={codeS}>{r.name}</code></td><td style={tdS}><Stepper value={r.maxMembers} onChange={v => setRoles(rs => rs.map(x => x.id === r.id ? { ...x, maxMembers: v } : x))} min={0} max={100} suffix={r.maxMembers === 0 ? "unlimited" : ""} /></td></tr>)}</tbody>
+                    </table>
+                  </Card>
+                  <Card title="Protected User Groups">
+                    <table style={tbl}><thead><tr>{["Group", "Description"].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>{groups.map(g => <tr key={g.id}><td style={tdS}><code style={codeS}>{g.name}</code></td><td style={{ ...tdS, color: "#64748b", fontSize: 12.5 }}>{g.description}</td></tr>)}</tbody>
+                    </table>
+                  </Card>
+                  <button onClick={() => flash("Administrative controls saved")} style={saveBtn}>Save Controls</button>
+                </Fragment>
+              )}
+
+              {/* ── USERS ── */}
+              {tab === "users" && !selectedUser && (
+                <Fragment>
+                  <Card title="User Directory" badge={<span style={{ fontSize: 12, color: "#64748b" }}>{filteredUsers.length} user{filteredUsers.length !== 1 ? "s" : ""}</span>}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: 12, marginTop: 8 }}>
+                      <input value={userSearch} onChange={e => setUserSearch(e.target.value)} placeholder="Search name or email…" style={{ ...fieldInput, width: 240 }} />
+                      <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ padding: "6px 10px", fontSize: 12, border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff" }}>
+                        <option value="all">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="locked">Locked</option>
+                        <option value="disabled">Disabled</option>
+                      </select>
+                    </div>
+                    <table style={tbl}>
+                      <thead><tr>{["User", "Status", "Role", "Last Login", "MFA", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>
+                        {filteredUsers.map(u => (
+                          <tr key={u.id} style={{ cursor: "pointer" }} onClick={() => setSelectedUser(u.id)}>
+                            <td style={tdS}><div style={{ fontWeight: 500 }}>{u.name}</div><div style={{ fontSize: 11.5, color: "#94a3b8" }}>{u.email}</div></td>
+                            <td style={tdS}><StatusBadge status={u.status} /></td>
+                            <td style={tdS}><code style={codeS}>{u.role}</code></td>
+                            <td style={{ ...tdS, ...mono }}>{u.lastLogin}</td>
+                            <td style={tdS}>{u.mfaEnabled ? <span style={{ color: "#059669", fontSize: 12, fontWeight: 500 }}>✓ On</span> : <span style={{ color: "#dc2626", fontSize: 12, fontWeight: 500 }}>✗ Off</span>}</td>
+                            <td style={tdS}><button style={linkBtn}>View →</button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </Card>
+                </Fragment>
+              )}
+
+              {/* ── USER DETAIL ── */}
+              {tab === "users" && su && (
+                <Fragment>
+                  <button onClick={() => setSelectedUser(null)} style={{ ...linkBtn, marginBottom: 16, fontSize: 13 }}>← Back to Users</button>
+
+                  {/* User header */}
+                  <Card title={su.name} badge={<StatusBadge status={su.status} />}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px 24px", padding: "8px 0" }}>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>EMAIL</div><div style={{ fontSize: 13 }}>{su.email}</div></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>ROLE</div><code style={codeS}>{su.role}</code></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>MFA</div><div style={{ fontSize: 13 }}>{su.mfaEnabled ? "✓ Enabled" : "✗ Disabled"}</div></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>LAST LOGIN</div><div style={mono}>{su.lastLogin}</div></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>PASSWORD CHANGED</div><div style={mono}>{su.pwLastChanged}</div></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>PASSWORD EXPIRES</div><div style={{ ...mono, color: new Date(su.pwExpires) < new Date() ? "#dc2626" : "#64748b" }}>{su.pwExpires}{new Date(su.pwExpires) < new Date() ? " — EXPIRED" : ""}</div></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>FAILED ATTEMPTS</div><div style={{ fontSize: 13, color: su.failedAttempts >= 3 ? "#dc2626" : "#0f172a", fontWeight: su.failedAttempts >= 3 ? 600 : 400 }}>{su.failedAttempts}</div></div>
+                      <div><div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>MUST CHANGE PW</div><div style={{ fontSize: 13 }}>{su.mustChange ? <span style={{ color: "#d97706", fontWeight: 500 }}>Yes</span> : "No"}</div></div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, marginTop: 12, paddingTop: 12, borderTop: "1px solid #f1f5f9" }}>
+                      {su.locked && <button onClick={() => unlockUser(su.id)} style={smallBtn}>Unlock Account</button>}
+                      {su.status === "disabled" && <button onClick={() => enableUser(su.id)} style={smallBtn}>Enable Account</button>}
+                      {su.status === "active" && <button onClick={() => disableUser(su.id)} style={dangerBtn}>Disable Account</button>}
+                      <button onClick={() => forcePasswordReset(su.id)} style={{ ...saveBtn, padding: "5px 12px", fontSize: 12, background: "#d97706" }}>Force Password Reset</button>
+                    </div>
+                  </Card>
+
+                  {/* Privileges — grant / revoke */}
+                  <Card title="Current Privileges" badge={<button onClick={() => setGrantingAccess(!grantingAccess)} style={linkBtn}>{grantingAccess ? "Done" : "+ Grant Privilege"}</button>}>
+                    {su.privileges.length === 0 && !grantingAccess && <div style={{ padding: "12px 0", fontSize: 12.5, color: "#94a3b8" }}>No privileges assigned</div>}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, padding: "8px 0" }}>
+                      {su.privileges.map(p => (
+                        <span key={p} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, background: "#eff6ff", color: "#2563eb", padding: "4px 10px", borderRadius: 5, fontWeight: 500 }}>
+                          {(PRIVILEGES.find(x => x.key === p) || {}).label || p}
+                          <span onClick={() => revokePrivilege(su.id, p)} style={{ cursor: "pointer", color: "#dc2626", fontWeight: 700, fontSize: 14, lineHeight: 1 }} title="Revoke">×</span>
+                        </span>
+                      ))}
+                    </div>
+                    {grantingAccess && (
+                      <div style={{ marginTop: 8, background: "#f8fafc", borderRadius: 8, padding: "12px 16px", border: "1px solid #e8ecf1" }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: "#475569", marginBottom: 8 }}>Grant a privilege</div>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 20px" }}>
+                          {PRIVILEGES.filter(p => !su.privileges.includes(p.key)).map(p => (
+                            <button key={p.key} onClick={() => grantPrivilege(su.id, p.key)} style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 8px", fontSize: 12.5, background: "none", border: "1px solid #e2e8f0", borderRadius: 6, cursor: "pointer", textAlign: "left", color: "#0f172a" }}>
+                              <span style={{ color: "#22c55e", fontWeight: 700 }}>+</span> {p.label}
+                            </button>
+                          ))}
+                        </div>
+                        {PRIVILEGES.filter(p => !su.privileges.includes(p.key)).length === 0 && <div style={{ fontSize: 12, color: "#94a3b8" }}>All privileges already granted</div>}
+                      </div>
+                    )}
+                  </Card>
+
+                  {/* Active Sessions */}
+                  <Card title="Active Sessions" badge={<span style={{ fontSize: 12, color: "#64748b" }}>{su.sessions.length} active</span>}>
+                    {su.sessions.length === 0 ? <div style={{ padding: "12px 0", fontSize: 12.5, color: "#94a3b8" }}>No active sessions</div> : (
+                      <table style={tbl}>
+                        <thead><tr>{["Device", "IP", "Location", "Started", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                        <tbody>{su.sessions.map(s => (
+                          <tr key={s.id}>
+                            <td style={tdS}><span style={{ fontSize: 12.5 }}>{s.device}</span></td>
+                            <td style={{ ...tdS, ...mono }}>{s.ip}</td>
+                            <td style={{ ...tdS, fontSize: 12.5 }}>{s.location}</td>
+                            <td style={{ ...tdS, ...mono }}>{s.startedAt}</td>
+                            <td style={tdS}><button onClick={() => killSession(su.id, s.id)} style={dangerBtn}>Terminate</button></td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    )}
+                  </Card>
+
+                  {/* Login History */}
+                  <Card title="Login History">
+                    <table style={tbl}>
+                      <thead><tr>{["Time", "Result", "IP", "Device"].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>{su.loginHistory.map((l, i) => (
+                        <tr key={i}>
+                          <td style={{ ...tdS, ...mono }}>{l.time}</td>
+                          <td style={tdS}>{l.success ? <span style={{ color: "#059669", fontSize: 12, fontWeight: 500 }}>✓ Success</span> : <span style={{ color: "#dc2626", fontSize: 12, fontWeight: 500 }}>✗ Failed</span>}</td>
+                          <td style={{ ...tdS, ...mono }}>{l.ip}</td>
+                          <td style={{ ...tdS, fontSize: 12.5 }}>{l.device}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </Card>
+
+                  {/* Access Timeline */}
+                  <Card title="Access Change History">
+                    <table style={tbl}>
+                      <thead><tr>{["Time", "Action", "Item", "By"].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>{su.accessLog.map((a, i) => (
+                        <tr key={i}>
+                          <td style={{ ...tdS, ...mono }}>{a.time}</td>
+                          <td style={tdS}><ActionBadge action={a.action} /></td>
+                          <td style={{ ...tdS, fontSize: 12.5 }}>{a.item}</td>
+                          <td style={{ ...tdS, fontSize: 12.5, color: "#64748b" }}>{a.by}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </Card>
+                </Fragment>
+              )}
+
+              {/* ── ACTIVE SESSIONS ── */}
+              {tab === "sessions" && (
+                <Card title="Active Sessions" badge={<span style={{ fontSize: 12, color: "#64748b" }}>{allSessions.length} total</span>}>
+                  {allSessions.length === 0 ? <div style={{ padding: "20px 0", textAlign: "center", color: "#94a3b8", fontSize: 13 }}>No active sessions</div> : (
+                    <table style={tbl}>
+                      <thead><tr>{["User", "Device", "IP", "Location", "Started", ""].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                      <tbody>{allSessions.map(s => (
+                        <tr key={s.id}>
+                          <td style={tdS}><div style={{ fontWeight: 500, fontSize: 13 }}>{s.userName}</div><div style={{ fontSize: 11, color: "#94a3b8" }}>{s.userEmail}</div></td>
+                          <td style={{ ...tdS, fontSize: 12.5 }}>{s.device}</td>
+                          <td style={{ ...tdS, ...mono }}>{s.ip}</td>
+                          <td style={{ ...tdS, fontSize: 12.5 }}>{s.location}</td>
+                          <td style={{ ...tdS, ...mono }}>{s.startedAt}</td>
+                          <td style={tdS}><button onClick={() => killSession(s.userId, s.id)} style={dangerBtn}>Terminate</button></td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  )}
+                </Card>
+              )}
+
+              {/* ── ACCESS LOG ── */}
+              {tab === "access" && (
+                <Card title="Access Grant & Revoke Log" badge={<span style={{ fontSize: 12, color: "#64748b" }}>{filteredAccessLogs.length} entries</span>}>
+                  <div style={{ display: "flex", gap: 8, marginBottom: 12, marginTop: 8 }}>
+                    <select value={accessFilter} onChange={e => setAccessFilter(e.target.value)} style={{ padding: "6px 10px", fontSize: 12, border: "1px solid #e2e8f0", borderRadius: 6, background: "#fff" }}>
+                      <option value="all">All actions</option>
+                      <option value="granted">Granted only</option>
+                      <option value="revoked">Revoked only</option>
+                    </select>
+                  </div>
+                  <table style={tbl}>
+                    <thead><tr>{["Time", "User", "Action", "Item", "By"].map(h => <th key={h} style={thS}>{h}</th>)}</tr></thead>
+                    <tbody>{filteredAccessLogs.map((a, i) => (
+                      <tr key={i}>
+                        <td style={{ ...tdS, ...mono, whiteSpace: "nowrap" }}>{a.time}</td>
+                        <td style={tdS}>
+                          <button onClick={() => { setSelectedUser(a.userId); setTab("users"); }} style={{ ...linkBtn, fontSize: 13 }}>{a.userName}</button>
+                        </td>
+                        <td style={tdS}><ActionBadge action={a.action} /></td>
+                        <td style={{ ...tdS, fontSize: 12.5 }}>{a.item}</td>
+                        <td style={{ ...tdS, fontSize: 12.5, color: "#64748b" }}>{a.by}</td>
+                      </tr>
+                    ))}</tbody>
+                  </table>
+                </Card>
+              )}
+
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>
