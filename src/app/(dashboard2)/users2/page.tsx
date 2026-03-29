@@ -15,7 +15,7 @@ import {
   Sidebar,
   Layout2,
   semanticColors,
-} from '@/components/ui2/components';
+} from '@/components/ui2';
 import {
   SearchFilterBar,
   EmptyState,
@@ -23,11 +23,15 @@ import {
   ConfirmationDialog,
   ErrorMessage,
   SuccessMessage,
-} from '@/components/ui2/components/Utilities';
+} from '@/components/ui2/Utilities';
 import { mockUsers } from '@/lib/mock-data';
 
 const NAV_ITEMS = [
-  // ... same as dashboard
+  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main' },
+  { id: 'users2', label: 'Users', icon: '👥', section: 'Main' },
+  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main' },
+  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies' },
+  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor' },
 ];
 
 interface UserFormData {

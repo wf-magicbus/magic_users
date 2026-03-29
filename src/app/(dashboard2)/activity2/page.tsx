@@ -15,9 +15,12 @@ import {
 import { mockSessions, mockAccessLog } from '@/lib/mock-data';
 
 const NAV_ITEMS = [
-  // ... same items
+  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main' },
+  { id: 'users2', label: 'Users', icon: '👥', section: 'Main' },
+  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main' },
+  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies' },
+  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor' },
 ];
-
 const ACTIVITY_TABS = [
   { id: 'sessions', label: 'Active Sessions', icon: '🖥️' },
   { id: 'access', label: 'Access Log', icon: '📋' },

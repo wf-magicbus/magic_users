@@ -16,7 +16,11 @@ import {
 import { mockPasswordPolicies, mockLockoutPolicy } from '@/lib/mock-data';
 
 const NAV_ITEMS = [
-  // ... same items
+  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main' },
+  { id: 'users2', label: 'Users', icon: '👥', section: 'Main' },
+  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main' },
+  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies' },
+  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor' },
 ];
 
 const POLICY_TABS = [
