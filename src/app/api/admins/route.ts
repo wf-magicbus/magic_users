@@ -1,38 +1,132 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-// TODO: Replace with real database query
+// GET /api/admins
 export async function GET(_request: NextRequest) {
-  return NextResponse.json([
-    {
-      id: "admin-1",
-      name: "Alice Johnson",
-      email: "alice@example.com",
-      role: "super_admin",
-      status: "active",
-      createdAt: "2025-01-15T10:00:00Z",
-    },
-    {
-      id: "admin-2",
-      name: "Bob Smith",
-      email: "bob@example.com",
-      role: "admin",
-      status: "active",
-      createdAt: "2025-02-20T14:30:00Z",
-    },
-  ]);
+  try {
+    const { data, error } = await supabase
+      .from("admin_accounts")
+      .select(`
+        id,
+        user_id,
+        name,
+        email,
+        role_id,
+        created_at,
+        created_by,
+        admin_roles:role_id(
+          role_name
+        )
+      `)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch admin accounts" },
+        { status: 500 }
+      );
+    }
+
+    // Transform response to match design document
+    const formattedData = (data ?? []).map((admin: any) => ({
+      id: admin.id,
+      user_id: admin.user_id,
+      name: admin.name,
+      email: admin.email,
+      role: admin.admin_roles?.role_name || null,
+      created_at: admin.created_at,
+      created_by: admin.created_by,
+    }));
+
+    return NextResponse.json(formattedData);
+  } catch (error) {
+    console.error("Error fetching admin accounts:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
 
-// TODO: Replace with real database insert
+// POST /api/admins
 export async function POST(request: NextRequest) {
-  const body = await request.json();
+  try {
+    const body = await request.json();
+    const { user_id, name, email, role_id, created_by } = body;
 
-  return NextResponse.json(
-    {
-      id: "admin-3",
-      ...body,
-      status: "active",
-      createdAt: new Date().toISOString(),
-    },
-    { status: 201 }
-  );
+    // Validate required fields
+    if (!user_id || !name || !email || !role_id) {
+      return NextResponse.json(
+        { error: "Missing required fields: user_id, name, email, role_id" },
+        { status: 400 }
+      );
+    }
+
+    // Check if email already exists
+    const { data: existingAdmin } = await supabase
+      .from("admin_accounts")
+      .select("id")
+      .eq("email", email)
+      .single();
+
+    if (existingAdmin) {
+      return NextResponse.json(
+        { error: "Admin account with this email already exists" },
+        { status: 409 }
+      );
+    }
+
+    // Insert new admin account
+    const { data, error } = await supabase
+      .from("admin_accounts")
+      .insert({
+        user_id,
+        name,
+        email,
+        role_id,
+        created_by: created_by || null,
+        created_at: new Date().toISOString(),
+      })
+      .select(`
+        id,
+        user_id,
+        name,
+        email,
+        role_id,
+        created_at,
+        created_by,
+        admin_roles:role_id(
+          role_name
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to create admin account" },
+        { status: 500 }
+      );
+    }
+
+    // Transform response to match design document
+    const formattedData = {
+      id: data.id,
+      user_id: data.user_id,
+      name: data.name,
+      email: data.email,
+      role: data.admin_roles?.role_name || null,
+      created_at: data.created_at,
+      created_by: data.created_by,
+    };
+
+    return NextResponse.json(formattedData, { status: 201 });
+  } catch (error) {
+    console.error("Error creating admin account:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

@@ -1,41 +1,144 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-// TODO: Replace with real database query
+// GET /api/users?search=<name>&status=<active|locked|disabled>&page=<num>&limit=<num>
 export async function GET(request: NextRequest) {
-  const search = request.nextUrl.searchParams.get("search") ?? "";
-  const status = request.nextUrl.searchParams.get("status") ?? "all";
-  const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
-  const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "20", 10);
+  try {
+    const search = request.nextUrl.searchParams.get("search") ?? "";
+    const status = request.nextUrl.searchParams.get("status") ?? "all";
+    const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
+    const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "20", 10);
 
-  void search;
-  void status;
+    // Calculate offset
+    const offset = (page - 1) * limit;
 
-  return NextResponse.json({
-    users: [
-      {
-        id: "user-1",
-        name: "Jane Doe",
-        email: "jane@example.com",
-        status: "active",
-        role: "user",
-        createdAt: "2025-03-01T08:00:00Z",
-        lastLoginAt: "2026-03-10T12:00:00Z",
-      },
-      {
-        id: "user-2",
-        name: "John Smith",
-        email: "john@example.com",
-        status: "locked",
-        role: "user",
-        createdAt: "2025-04-10T09:30:00Z",
-        lastLoginAt: "2026-03-08T16:45:00Z",
-      },
-    ],
-    pagination: {
+    // Build query
+    let query = supabase.from("user_profiles").select(`
+      user_id,
+      name,
+      status,
+      role,
+      mfa_enabled,
+      last_login,
+      created_at
+    `, { count: "exact" });
+
+    // Apply status filter
+    if (status && status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    // Apply search filter on name
+    if (search) {
+      query = query.ilike("name", `%${search}%`);
+    }
+
+    // Apply pagination
+    query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch users" },
+        { status: 500 }
+      );
+    }
+
+    const total = count ?? 0;
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({
+      users: data ?? [],
+      total,
       page,
       limit,
-      total: 42,
-      totalPages: Math.ceil(42 / limit),
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/users
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { user_id, name, status, role, mfa_enabled } = body;
+
+    // Validate required fields
+    if (!name) {
+      return NextResponse.json(
+        { error: "Missing required field: name" },
+        { status: 400 }
+      );
+    }
+
+    // Validate status if provided
+    if (status && !["active", "locked", "disabled"].includes(status)) {
+      return NextResponse.json(
+        { error: "Invalid status. Must be one of: active, locked, disabled" },
+        { status: 400 }
+      );
+    }
+
+    // Check if user profile with this name already exists
+    const { data: existingProfile } = await supabase
+      .from("user_profiles")
+      .select("user_id")
+      .eq("name", name)
+      .single();
+
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: "User profile with this name already exists" },
+        { status: 409 }
+      );
+    }
+
+    // If user_id is not provided, generate a new UUID
+    const finalUserId = user_id || crypto.randomUUID();
+
+    // Create new user profile
+    const { data, error } = await supabase
+      .from("user_profiles")
+      .insert({
+        user_id: finalUserId,
+        name,
+        status: status || "active",
+        role: role || null,
+        mfa_enabled: mfa_enabled || false,
+        last_login: null,
+      })
+      .select(`
+        user_id,
+        name,
+        status,
+        role,
+        mfa_enabled,
+        last_login,
+        created_at
+      `)
+      .single();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(data, { status: 201 });
+  } catch (error) {
+    console.error("Error creating user profile:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

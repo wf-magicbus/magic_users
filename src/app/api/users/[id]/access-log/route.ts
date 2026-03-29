@@ -1,31 +1,56 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-// TODO: Replace with real database query
+
+// GET /api/users/[id]/access-log
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
+  try {
+    const { id } = await params;
 
-  return NextResponse.json({
-    userId: id,
-    entries: [
-      {
-        id: "log-1",
-        timestamp: "2026-03-12T09:00:00Z",
-        adminId: "admin-1",
-        adminName: "Alice Johnson",
-        action: "user.unlock",
-        details: "Unlocked user account after failed login attempts",
-      },
-      {
-        id: "log-2",
-        timestamp: "2026-03-10T11:20:00Z",
-        adminId: "admin-2",
-        adminName: "Bob Smith",
-        action: "user.privilege.grant",
-        details: "Granted reports:export privilege",
-      },
-    ],
-  });
+    const { data, error } = await supabase
+      .from("access_log ")
+      .select(`
+          user_id,
+          action,
+          item,
+          performed_by ,
+          timestamp
+        `)
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch user" },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+
+    // Transform to match design document
+    return NextResponse.json({
+      user_id: data.user_id,
+      action: data.action,
+      item: data.item,
+      performed_by: data.performed_by,
+      timestamp: data.timestamp,
+    });
+  } catch (error) {
+    console.error("Error fetching access log:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }
+
