@@ -1,51 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabase } from "@/lib/supabase";
 
-// TODO: Replace with real database query
+// GET /api/access-log?action=<action>&page=<num>&limit=<num>
 export async function GET(request: NextRequest) {
-  const action = request.nextUrl.searchParams.get("action") ?? "all";
-  const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
-  const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "20", 10);
+  try {
+    const action = request.nextUrl.searchParams.get("action");
+    const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
+    const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "20", 10);
+    const offset = (page - 1) * limit;
 
-  void action;
+    // Build query
+    let query = supabase
+      .from("access_log")
+      .select("*", { count: "exact" });
 
-  return NextResponse.json({
-    entries: [
-      {
-        id: "log-1",
-        timestamp: "2026-03-12T09:00:00Z",
-        adminId: "admin-1",
-        adminName: "Alice Johnson",
-        action: "user.unlock",
-        targetUserId: "user-2",
-        targetUserName: "John Smith",
-        details: "Unlocked user account after failed login attempts",
+    // Filter by action if provided and not "all"
+    if (action && action !== "all") {
+      query = query.eq("action", action);
+    }
+
+    // Add pagination
+    query = query.order("timestamp", { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    const { data, count, error } = await query;
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch access logs" },
+        { status: 500 }
+      );
+    }
+
+    const total = count ?? 0;
+    const entries = data ?? [];
+
+    return NextResponse.json({
+      entries,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
       },
-      {
-        id: "log-2",
-        timestamp: "2026-03-12T08:45:00Z",
-        adminId: "admin-1",
-        adminName: "Alice Johnson",
-        action: "password_policy.update",
-        targetUserId: null,
-        targetUserName: null,
-        details: "Updated minimum password length from 8 to 12",
-      },
-      {
-        id: "log-3",
-        timestamp: "2026-03-11T16:30:00Z",
-        adminId: "admin-2",
-        adminName: "Bob Smith",
-        action: "user.disable",
-        targetUserId: "user-5",
-        targetUserName: "Eve Williams",
-        details: "Disabled user account due to policy violation",
-      },
-    ],
-    pagination: {
-      page,
-      limit,
-      total: 150,
-      totalPages: Math.ceil(150 / limit),
-    },
-  });
+    });
+  } catch (error) {
+    console.error("Error fetching access logs:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

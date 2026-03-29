@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// TODO: Replace with real database query
+// GET /api/users/[id]/privileges
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
