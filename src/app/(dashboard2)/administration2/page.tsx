@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   Card,
@@ -16,11 +17,11 @@ import {
 import { mockAdmins, mockAdminRoles, mockProtectedGroups } from '@/lib/mock-data';
 
 const NAV_ITEMS = [
-  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main' },
-  { id: 'users2', label: 'Users', icon: '👥', section: 'Main' },
-  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main' },
-  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies' },
-  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor' },
+  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main', route: '/dashboard2' },
+  { id: 'users2', label: 'Users', icon: '👥', section: 'Main', route: '/users2' },
+  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main', route: '/administration2' },
+  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies', route: '/policies2' },
+  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor', route: '/activity2' },
 ];
 
 const ADMIN_TABS = [
@@ -30,8 +31,8 @@ const ADMIN_TABS = [
 ];
 
 export default function Administration2Page() {
+  const router = useRouter();
   const { loading } = useAuthGuard();
-  const [activeNav, setActiveNav] = useState('administration2');
   const [activeAdminTab, setActiveAdminTab] = useState('accounts');
 
   if (loading) return <div>Loading...</div>;
@@ -42,8 +43,11 @@ export default function Administration2Page() {
       sidebar={
         <Sidebar
           items={NAV_ITEMS}
-          activeItem={activeNav}
-          onItemClick={setActiveNav}
+          activeItem="administration2"
+          onItemClick={(itemId) => {
+            const item = NAV_ITEMS.find(i => i.id === itemId);
+            if (item?.route) router.push(item.route);
+          }}
           branding={{ title: 'Magic Users' }}
         />
       }
@@ -59,7 +63,7 @@ export default function Administration2Page() {
           onChange={setActiveAdminTab}
         >
           {activeAdminTab === 'accounts' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="accounts">
               <Card title="Admin Accounts">
                 <Table>
                   <Table.Head>
@@ -123,7 +127,7 @@ export default function Administration2Page() {
           )}
 
           {activeAdminTab === 'roles' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="roles">
               <Card title="Admin Roles">
                 <Table>
                   <Table.Head>
@@ -158,7 +162,7 @@ export default function Administration2Page() {
           )}
 
           {activeAdminTab === 'groups' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="groups">
               <Card title="Protected Groups">
                 <Table>
                   <Table.Head>

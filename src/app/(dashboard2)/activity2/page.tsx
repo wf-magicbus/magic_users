@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   Card,
@@ -15,11 +16,11 @@ import {
 import { mockSessions, mockAccessLog } from '@/lib/mock-data';
 
 const NAV_ITEMS = [
-  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main' },
-  { id: 'users2', label: 'Users', icon: '👥', section: 'Main' },
-  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main' },
-  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies' },
-  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor' },
+  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main', route: '/dashboard2' },
+  { id: 'users2', label: 'Users', icon: '👥', section: 'Main', route: '/users2' },
+  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main', route: '/administration2' },
+  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies', route: '/policies2' },
+  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor', route: '/activity2' },
 ];
 const ACTIVITY_TABS = [
   { id: 'sessions', label: 'Active Sessions', icon: '🖥️' },
@@ -27,8 +28,8 @@ const ACTIVITY_TABS = [
 ];
 
 export default function Activity2Page() {
+  const router = useRouter();
   const { loading } = useAuthGuard();
-  const [activeNav, setActiveNav] = useState('activity2');
   const [activeActivityTab, setActiveActivityTab] = useState('sessions');
 
   if (loading) return <div>Loading...</div>;
@@ -39,8 +40,11 @@ export default function Activity2Page() {
       sidebar={
         <Sidebar
           items={NAV_ITEMS}
-          activeItem={activeNav}
-          onItemClick={setActiveNav}
+          activeItem="activity2"
+          onItemClick={(itemId) => {
+            const item = NAV_ITEMS.find(i => i.id === itemId);
+            if (item?.route) router.push(item.route);
+          }}
           branding={{ title: 'Magic Users' }}
         />
       }
@@ -56,7 +60,7 @@ export default function Activity2Page() {
           onChange={setActiveActivityTab}
         >
           {activeActivityTab === 'sessions' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="sessions">
               <Card title="Active Sessions">
                 <Table>
                   <Table.Head>
@@ -91,7 +95,7 @@ export default function Activity2Page() {
           )}
 
           {activeActivityTab === 'access' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="access">
               <Card title="Access Log (Grants & Revokes)">
                 <Table>
                   <Table.Head>

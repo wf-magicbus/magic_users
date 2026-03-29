@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthGuard } from '@/lib/use-auth-guard';
 import {
   Card,
@@ -16,11 +17,11 @@ import {
 import { mockPasswordPolicies, mockLockoutPolicy } from '@/lib/mock-data';
 
 const NAV_ITEMS = [
-  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main' },
-  { id: 'users2', label: 'Users', icon: '👥', section: 'Main' },
-  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main' },
-  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies' },
-  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor' },
+  { id: 'dashboard2', label: 'Dashboard', icon: '📊', section: 'Main', route: '/dashboard2' },
+  { id: 'users2', label: 'Users', icon: '👥', section: 'Main', route: '/users2' },
+  { id: 'administration2', label: 'Administration', icon: '⚙️', section: 'Main', route: '/administration2' },
+  { id: 'policies2', label: 'Policies', icon: '🔒', section: 'Policies', route: '/policies2' },
+  { id: 'activity2', label: 'Activity', icon: '📋', section: 'Monitor', route: '/activity2' },
 ];
 
 const POLICY_TABS = [
@@ -29,8 +30,8 @@ const POLICY_TABS = [
 ];
 
 export default function Policies2Page() {
+  const router = useRouter();
   const { loading } = useAuthGuard();
-  const [activeNav, setActiveNav] = useState('policies2');
   const [activePolicyTab, setActivePolicyTab] = useState('password');
   const [selectedRole, setSelectedRole] = useState('all_users');
 
@@ -44,8 +45,11 @@ export default function Policies2Page() {
       sidebar={
         <Sidebar
           items={NAV_ITEMS}
-          activeItem={activeNav}
-          onItemClick={setActiveNav}
+          activeItem="policies2"
+          onItemClick={(itemId) => {
+            const item = NAV_ITEMS.find(i => i.id === itemId);
+            if (item?.route) router.push(item.route);
+          }}
           branding={{ title: 'Magic Users' }}
         />
       }
@@ -61,7 +65,7 @@ export default function Policies2Page() {
           onChange={setActivePolicyTab}
         >
           {activePolicyTab === 'password' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="password">
               <Card title="Password Policy Configuration">
                 <div style={{ marginBottom: '20px' }}>
                   <Select
@@ -108,7 +112,7 @@ export default function Policies2Page() {
           )}
 
           {activePolicyTab === 'lockout' && (
-            <Tabs.Content>
+            <Tabs.Content tabId="lockout">
               <Card title="Account Lockout Policy">
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
                   <Input
