@@ -200,8 +200,23 @@ export default function Users2Page() {
                   {filteredUsers.map((user) => (
                     <tr key={user.id} style={{ borderBottom: '1px solid rgba(119, 124, 124, 0.2)' }}>
                       <td style={{ padding: '14px 16px', fontSize: '14px' }}>
-                        <strong>{user.name}</strong>
-                      </td>
+  <button
+    onClick={() => router.push(`/users/${user.id}`)}
+    style={{
+      background: 'none',
+      border: 'none',
+      padding: 0,
+      margin: 0,
+      cursor: 'pointer',
+      fontWeight: 600,
+      color: 'rgba(33,128,141,1)',
+      textDecoration: 'underline',
+      fontSize: '14px'
+    }}
+  >
+    {user.name}
+  </button>
+</td>
                       <td style={{ padding: '14px 16px', fontSize: '14px' }}>{user.email}</td>
                       <td style={{ padding: '14px 16px', fontSize: '14px' }}>{user.role}</td>
                       <td style={{ padding: '14px 16px', fontSize: '14px' }}>
