@@ -10,11 +10,11 @@ export const colors = {
   cream100: 'rgba(255, 255, 253, 1)',
 
   // Grays
-  gray200: 'rgba(245, 245, 245, 1)',
-  gray300: 'rgba(167, 169, 169, 1)',
-  gray400: 'rgba(119, 124, 124, 1)',
-  slate500: 'rgba(98, 108, 113, 1)',
-  slate900: 'rgba(19, 52, 59, 1)',
+  gray200: 'rgb(0, 0, 0)',
+  gray300: 'rgb(0, 0, 0)',
+  gray400: 'rgb(0, 6, 6)',
+  slate500: 'rgb(0, 6, 8)',
+  slate900: 'rgb(1, 11, 13)',
 
   // Charcoal (dark theme)
   charcoal700: 'rgba(31, 33, 33, 1)',
@@ -34,8 +34,8 @@ export const colors = {
 };
 
 export const semanticColors = {
-  background: colors.charcoal700,
-  surface: colors.charcoal800,
+  background: colors.white,
+  surface: colors.white,
   text: colors.gray200,
   textSecondary: 'rgba(167, 169, 169, 0.7)',
   primary: colors.teal300,

@@ -14,7 +14,7 @@ export const InfoCard = ({
   text: string;
 }) => {
   const cardStyle: React.CSSProperties = {
-    background: 'rgba(50, 184, 198, 0.08)',
+    background: 'rgba(238, 245, 246, 0.08)',
     border: `1px solid rgba(50, 184, 198, 0.2)`,
     borderRadius: radius.base,
     padding: '16px',

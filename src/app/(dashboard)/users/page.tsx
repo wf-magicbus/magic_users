@@ -40,13 +40,13 @@ export default function UsersPage() {
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Users Directory</h1>
 
       <div className="bg-white rounded-lg shadow-sm">
-        <div className="p-4 border-b border-gray-100 flex flex-wrap gap-3">
+        <div className="p-4 border-b border-white-100 flex flex-wrap gap-3">
           <input
             type="text"
             placeholder="Search by name or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm flex-1 min-w-[200px] focus:outline-none focus:ring-2 focus:ring-white-900 focus:border-transparent"
           />
           <select
             value={statusFilter}
