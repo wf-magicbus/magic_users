@@ -201,7 +201,7 @@ export default function Users2Page() {
                     <tr key={user.id} style={{ borderBottom: '1px solid rgba(119, 124, 124, 0.2)' }}>
                       <td style={{ padding: '14px 16px', fontSize: '14px' }}>
   <button
-    onClick={() => router.push(`/users/${user.id}`)}
+    onClick={() => router.push(`/users2/${user.id}`)}
     style={{
       background: 'none',
       border: 'none',
