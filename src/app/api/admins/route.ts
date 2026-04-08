@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
 
 // GET /api/admins
 export async function GET(_request: NextRequest) {
@@ -39,7 +39,10 @@ export async function GET(_request: NextRequest) {
       created_by: admin.created_by,
     }));
 
-    return NextResponse.json(formattedData);
+    return NextResponse.json({
+      count: formattedData.length,
+      admins: formattedData,
+    });
   } catch (error) {
     console.error("Error fetching admin accounts:", error);
     return NextResponse.json(
