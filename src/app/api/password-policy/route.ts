@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
 
 // GET /api/password-policy?role=<role>
 export async function GET(request: NextRequest) {
@@ -240,6 +240,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: "Missing required field: role" },
         { status: 400 }
+      );
+    }
+
+    if (role === "super_admin") {
+      return NextResponse.json(
+        { error: "Super admin password policy is protected and cannot be modified" },
+        { status: 403 }
       );
     }
 

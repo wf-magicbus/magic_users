@@ -1,55 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
-// GET /api/access-log?action=<action>&page=<num>&limit=<num>
+
 export async function GET(request: NextRequest) {
   try {
     const action = request.nextUrl.searchParams.get("action");
     const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
-    const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "20", 10);
+    const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "50", 10);
     const offset = (page - 1) * limit;
 
-    // Build query
-    let query = supabase
+    let query = supabaseAdmin
       .from("access_log")
       .select("*", { count: "exact" });
 
-    // Filter by action if provided and not "all"
     if (action && action !== "all") {
       query = query.eq("action", action);
     }
 
-    // Add pagination
-    query = query.order("timestamp", { ascending: false })
-      .range(offset, offset + limit - 1);
+    query = query.order("timestamp", { ascending: false }).range(offset, offset + limit - 1);
 
-    const { data, count, error } = await query;
+    const { data: entries, count, error } = await query;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch access logs" },
-        { status: 500 }
-      );
+    const allEntries = entries ?? [];
+    const userIds = [...new Set([
+      ...allEntries.map((e) => e.user_id),
+      ...allEntries.map((e) => e.performed_by),
+    ].filter(Boolean))];
+
+    let profileMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from("user_profiles")
+        .select("user_id, name")
+        .in("user_id", userIds);
+      (profiles ?? []).forEach((p) => { profileMap[p.user_id] = p.name; });
     }
 
-    const total = count ?? 0;
-    const entries = data ?? [];
+    const result = allEntries.map((e) => ({
+      ...e,
+      user_name: profileMap[e.user_id] ?? "Unknown",
+      performed_by_name: profileMap[e.performed_by] ?? "Unknown",
+    }));
 
     return NextResponse.json({
-      entries,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      entries: result,
+      pagination: { page, limit, total: count ?? 0, totalPages: Math.ceil((count ?? 0) / limit) },
     });
-  } catch (error) {
-    console.error("Error fetching access logs:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

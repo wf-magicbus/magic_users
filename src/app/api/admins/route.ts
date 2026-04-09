@@ -4,6 +4,14 @@ import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
 // GET /api/admins
 export async function GET(_request: NextRequest) {
   try {
+    // Only fetch accounts whose role is marked as an admin role
+    const { data: adminRoles } = await supabase
+      .from("admin_roles")
+      .select("id")
+      .eq("is_admin", true);
+
+    const adminRoleIds = (adminRoles ?? []).map((r: any) => r.id);
+
     const { data, error } = await supabase
       .from("admin_accounts")
       .select(`
@@ -18,6 +26,7 @@ export async function GET(_request: NextRequest) {
           role_name
         )
       `)
+      .in("role_id", adminRoleIds)
       .order("created_at", { ascending: false });
 
     if (error) {

@@ -1,25 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
-// TODO: Replace with real database query
 export async function GET(_request: NextRequest) {
-  return NextResponse.json([
-    {
-      id: "session-1",
-      userId: "user-1",
-      userName: "Jane Doe",
-      ipAddress: "192.168.1.10",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-      createdAt: "2026-03-12T08:00:00Z",
-      lastActiveAt: "2026-03-12T09:30:00Z",
-    },
-    {
-      id: "session-2",
-      userId: "user-2",
-      userName: "John Smith",
-      ipAddress: "10.0.0.42",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      createdAt: "2026-03-12T07:15:00Z",
-      lastActiveAt: "2026-03-12T09:25:00Z",
-    },
-  ]);
+  try {
+    const { data: sessions, error } = await supabaseAdmin
+      .from("user_sessions")
+      .select("id, user_id, ip_address, device, location, started_at, is_active")
+      .eq("is_active", true)
+      .order("started_at", { ascending: false });
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const userIds = [...new Set((sessions ?? []).map((s) => s.user_id))];
+    let profileMap: Record<string, string> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from("user_profiles")
+        .select("user_id, name")
+        .in("user_id", userIds);
+      (profiles ?? []).forEach((p) => { profileMap[p.user_id] = p.name; });
+    }
+
+    const result = (sessions ?? []).map((s) => ({
+      ...s,
+      user_name: profileMap[s.user_id] ?? "Unknown",
+    }));
+
+    return NextResponse.json(result);
+  } catch (e) {
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

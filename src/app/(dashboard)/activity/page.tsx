@@ -1,142 +1,182 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuthGuard } from "@/lib/use-auth-guard";
-import { mockSessions, mockAccessLog } from "@/lib/mock-data";
 
-const tabs = ["Sessions", "Access Log"] as const;
-type Tab = (typeof tabs)[number];
-
-const actionBadge = (action: string) => {
-  const styles: Record<string, string> = {
-    granted: "bg-green-100 text-green-700",
-    revoked: "bg-red-100 text-red-700",
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${styles[action] || "bg-gray-100 text-gray-600"}`}>
-      {action}
-    </span>
-  );
-};
+const tabs = ["Active Sessions", "Access Log"] as const;
+type Tab = typeof tabs[number];
 
 export default function ActivityPage() {
   const { loading } = useAuthGuard();
-  const [activeTab, setActiveTab] = useState<Tab>("Sessions");
+  const [activeTab, setActiveTab] = useState<Tab>("Active Sessions");
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--crimson)", borderTopColor: "transparent" }} />
+    </div>
+  );
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Activity</h1>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 mb-6">
-        <div className="flex gap-6">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === tab
-                  ? "border-gray-900 text-gray-900"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+      <div className="mb-8">
+        <p className="text-sm font-medium mb-1" style={{ color: "var(--crimson)" }}>Monitoring</p>
+        <h1 className="text-3xl font-bold tracking-tight" style={{ color: "var(--text-1)" }}>Activity</h1>
+        <p className="text-sm mt-1" style={{ color: "var(--text-2)" }}>Live sessions and privilege change audit log</p>
       </div>
 
-      {activeTab === "Sessions" && <SessionsTab />}
+      <div className="flex gap-1 p-1 rounded-xl w-fit mb-6" style={{ background: "var(--silver-100)" }}>
+        {tabs.map(tab => (
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className="px-4 py-2 text-sm font-semibold rounded-lg transition-all"
+            style={{
+              background: activeTab === tab ? "var(--surface)" : "transparent",
+              color: activeTab === tab ? "var(--crimson)" : "var(--text-2)",
+              boxShadow: activeTab === tab ? "var(--shadow-sm)" : "none",
+            }}>
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "Active Sessions" && <SessionsTab />}
       {activeTab === "Access Log" && <AccessLogTab />}
     </div>
   );
 }
 
 function SessionsTab() {
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSessions = () => {
+    setLoading(true);
+    fetch("/api/sessions")
+      .then(r => r.json())
+      .then(d => setSessions(Array.isArray(d) ? d : []))
+      .catch(() => setSessions([]))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { fetchSessions(); }, []);
+
+  const terminate = async (id: string) => {
+    await fetch(`/api/sessions/${id}`, { method: "DELETE" });
+    fetchSessions();
+  };
+
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <table className="w-full text-sm">
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-md)" }}>
+      <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: "1px solid var(--border)" }}>
+        <span className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            {loading ? "—" : sessions.length} live sessions
+          </span>
+        </span>
+      </div>
+      <table className="w-full">
         <thead>
-          <tr className="text-left text-gray-500 border-b border-gray-100">
-            <th className="px-4 py-3 font-medium">User</th>
-            <th className="px-4 py-3 font-medium">Email</th>
-            <th className="px-4 py-3 font-medium">IP Address</th>
-            <th className="px-4 py-3 font-medium">Device</th>
-            <th className="px-4 py-3 font-medium">Location</th>
-            <th className="px-4 py-3 font-medium">Started At</th>
-            <th className="px-4 py-3 font-medium">Actions</th>
+          <tr style={{ borderBottom: "1px solid var(--border)" }}>
+            {["User", "IP Address", "Device", "Location", "Started", ""].map(h => (
+              <th key={h} className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>{h}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {mockSessions
-            .filter((s) => s.is_active)
-            .map((session, i) => (
-              <tr key={session.id} className={`border-b border-gray-50 ${i % 2 === 1 ? "bg-gray-50" : ""}`}>
-                <td className="px-4 py-3 font-medium text-gray-900">{session.user_name}</td>
-                <td className="px-4 py-3 text-gray-600">{session.user_email}</td>
-                <td className="px-4 py-3 text-gray-600">{session.ip_address}</td>
-                <td className="px-4 py-3 text-gray-600">{session.device}</td>
-                <td className="px-4 py-3 text-gray-600">{session.location}</td>
-                <td className="px-4 py-3 text-gray-600">{new Date(session.started_at).toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  <button className="px-3 py-1 bg-red-50 text-red-600 text-xs font-medium rounded hover:bg-red-100 transition-colors">
-                    Terminate
-                  </button>
-                </td>
-              </tr>
-            ))}
+          {loading ? (
+            <tr><td colSpan={6} className="px-6 py-8 text-center text-sm" style={{ color: "var(--text-3)" }}>Loading…</td></tr>
+          ) : sessions.map((s, i) => (
+            <tr key={s.id} className="transition-colors"
+              style={{ borderBottom: i < sessions.length - 1 ? "1px solid var(--border)" : "none" }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+              <td className="px-6 py-4">
+                <div className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>{s.user_name}</div>
+              </td>
+              <td className="px-6 py-4 text-sm font-mono" style={{ color: "var(--text-2)" }}>{s.ip_address}</td>
+              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{s.device}</td>
+              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{s.location ?? "—"}</td>
+              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-3)" }}>{new Date(s.started_at).toLocaleString()}</td>
+              <td className="px-6 py-4">
+                <button onClick={() => terminate(s.id)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                  style={{ background: "var(--crimson-50)", color: "var(--crimson)" }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--crimson-100)"}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--crimson-50)"}>
+                  Terminate
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
+      {!loading && sessions.length === 0 && (
+        <div className="py-12 text-center text-sm" style={{ color: "var(--text-3)" }}>No active sessions.</div>
+      )}
     </div>
   );
 }
 
 function AccessLogTab() {
   const [actionFilter, setActionFilter] = useState("all");
+  const [entries, setEntries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = mockAccessLog.filter((entry) => {
-    return actionFilter === "all" || entry.action === actionFilter;
-  });
+  useEffect(() => {
+    setLoading(true);
+    const params = new URLSearchParams({ limit: "100" });
+    if (actionFilter !== "all") params.set("action", actionFilter);
+    fetch(`/api/access-log?${params}`)
+      .then(r => r.json())
+      .then(d => setEntries(d.entries ?? []))
+      .catch(() => setEntries([]))
+      .finally(() => setLoading(false));
+  }, [actionFilter]);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm">
-      <div className="p-4 border-b border-gray-100">
-        <select
-          value={actionFilter}
-          onChange={(e) => setActionFilter(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-        >
+    <div className="rounded-2xl overflow-hidden" style={{ background: "var(--surface)", boxShadow: "var(--shadow-md)" }}>
+      <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+        <select value={actionFilter} onChange={e => setActionFilter(e.target.value)}
+          className="px-4 py-2 text-sm rounded-xl border"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)", color: "var(--text-1)", outline: "none" }}>
           <option value="all">All Actions</option>
           <option value="granted">Granted</option>
           <option value="revoked">Revoked</option>
         </select>
       </div>
-      <table className="w-full text-sm">
+      <table className="w-full">
         <thead>
-          <tr className="text-left text-gray-500 border-b border-gray-100">
-            <th className="px-4 py-3 font-medium">User</th>
-            <th className="px-4 py-3 font-medium">Action</th>
-            <th className="px-4 py-3 font-medium">Item</th>
-            <th className="px-4 py-3 font-medium">Performed By</th>
-            <th className="px-4 py-3 font-medium">Timestamp</th>
+          <tr style={{ borderBottom: "1px solid var(--border)" }}>
+            {["User", "Action", "Item", "Performed By", "Timestamp"].map(h => (
+              <th key={h} className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>{h}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {filtered.map((entry, i) => (
-            <tr key={entry.id} className={`border-b border-gray-50 ${i % 2 === 1 ? "bg-gray-50" : ""}`}>
-              <td className="px-4 py-3 font-medium text-gray-900">{entry.user_name}</td>
-              <td className="px-4 py-3">{actionBadge(entry.action)}</td>
-              <td className="px-4 py-3 text-gray-600">{entry.item}</td>
-              <td className="px-4 py-3 text-gray-600">{entry.performed_by_name}</td>
-              <td className="px-4 py-3 text-gray-600">{new Date(entry.timestamp).toLocaleString()}</td>
+          {loading ? (
+            <tr><td colSpan={5} className="px-6 py-8 text-center text-sm" style={{ color: "var(--text-3)" }}>Loading…</td></tr>
+          ) : entries.map((e, i) => (
+            <tr key={e.id} className="transition-colors"
+              style={{ borderBottom: i < entries.length - 1 ? "1px solid var(--border)" : "none" }}
+              onMouseEnter={el => (el.currentTarget as HTMLElement).style.background = "var(--surface-2)"}
+              onMouseLeave={el => (el.currentTarget as HTMLElement).style.background = "transparent"}>
+              <td className="px-6 py-4 text-sm font-semibold" style={{ color: "var(--text-1)" }}>{e.user_name}</td>
+              <td className="px-6 py-4">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+                  style={e.action === "granted" ? { background: "#F0FDF4", color: "#15803D" } : { background: "var(--crimson-50)", color: "var(--crimson)" }}>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: e.action === "granted" ? "#22C55E" : "var(--crimson)" }}/>
+                  {e.action}
+                </span>
+              </td>
+              <td className="px-6 py-4 text-sm font-mono" style={{ color: "var(--text-2)" }}>{e.item}</td>
+              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{e.performed_by_name}</td>
+              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-3)" }}>{new Date(e.timestamp).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      {filtered.length === 0 && (
-        <div className="p-8 text-center text-gray-400 text-sm">No log entries found.</div>
+      {!loading && entries.length === 0 && (
+        <div className="py-12 text-center text-sm" style={{ color: "var(--text-3)" }}>No entries found.</div>
       )}
     </div>
   );

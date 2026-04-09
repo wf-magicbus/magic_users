@@ -1,25 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-const FIELDS = "id, role, lockout_threshold_attempts, lockout_duration_minutes, reset_counter_after_minutes, updated_at";
-
-// GET /api/lockout-policy?role=student
+// GET /api/logon-restrictions?role=student
 export async function GET(request: NextRequest) {
   const role = request.nextUrl.searchParams.get("role");
   try {
     if (role) {
       const { data, error } = await supabaseAdmin
-        .from("account_lockout_policy")
-        .select(FIELDS)
+        .from("logon_restrictions")
+        .select("*")
         .eq("role", role)
         .single();
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
       return NextResponse.json(data);
     }
-    // No role param → return all roles
     const { data, error } = await supabaseAdmin
-      .from("account_lockout_policy")
-      .select(FIELDS)
+      .from("logon_restrictions")
+      .select("*")
       .in("role", ["student", "user_admin", "auditor", "super_admin"])
       .order("role");
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -29,19 +26,19 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// PUT /api/lockout-policy?role=student
+// PUT /api/logon-restrictions?role=student
 export async function PUT(request: NextRequest) {
   const role = request.nextUrl.searchParams.get("role");
   if (!role) return NextResponse.json({ error: "role param required" }, { status: 400 });
   if (role === "super_admin") return NextResponse.json({ error: "super_admin policy is protected" }, { status: 403 });
   try {
     const body = await request.json();
-    const { id, ...fields } = body;
+    const { id, role: _r, ...fields } = body;
     const { data, error } = await supabaseAdmin
-      .from("account_lockout_policy")
+      .from("logon_restrictions")
       .update({ ...fields, updated_at: new Date().toISOString() })
       .eq("role", role)
-      .select(FIELDS)
+      .select("*")
       .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json(data);
