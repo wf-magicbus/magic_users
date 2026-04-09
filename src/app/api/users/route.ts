@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/users?search=<name>&status=<active|locked|disabled>&page=<num>&limit=<num>
 export async function GET(request: NextRequest) {
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate offset
     const offset = (page - 1) * limit;
-
+    const supabase = await createClient();
     // Build query
     let query = supabase.from("user_profiles").select(`
       user_id,
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user profile with this name already exists
+    const supabase = await createClient();
     const { data: existingProfile } = await supabase
       .from("user_profiles")
       .select("user_id")

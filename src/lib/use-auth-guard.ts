@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/client";
 
 interface AdminSession {
   user_id: string;
@@ -18,6 +18,7 @@ export function useAuthGuard() {
 
   useEffect(() => {
     async function checkAuth() {
+      const supabase = await createClient();
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {

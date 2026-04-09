@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/access-log?action=<action>&page=<num>&limit=<num>
 export async function GET(request: NextRequest) {
@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(request.nextUrl.searchParams.get("page") ?? "1", 10);
     const limit = parseInt(request.nextUrl.searchParams.get("limit") ?? "20", 10);
     const offset = (page - 1) * limit;
-
+    const supabase = await createClient();
     // Build query
     let query = supabase
       .from("access_log")

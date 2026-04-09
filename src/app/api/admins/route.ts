@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/admins
 export async function GET(_request: NextRequest) {
   try {
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("admin_accounts")
       .select(`
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    const supabase = await createClient();
     // Check if email already exists
     const { data: existingAdmin } = await supabase
       .from("admin_accounts")

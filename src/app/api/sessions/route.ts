@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-// TODO: Replace with real database query
-export async function GET(_request: NextRequest) {
-  return NextResponse.json([
-    {
-      id: "session-1",
-      userId: "user-1",
-      userName: "Jane Doe",
-      ipAddress: "192.168.1.10",
-      userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
-      createdAt: "2026-03-12T08:00:00Z",
-      lastActiveAt: "2026-03-12T09:30:00Z",
-    },
-    {
-      id: "session-2",
-      userId: "user-2",
-      userName: "John Smith",
-      ipAddress: "10.0.0.42",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      createdAt: "2026-03-12T07:15:00Z",
-      lastActiveAt: "2026-03-12T09:25:00Z",
-    },
-  ]);
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    const { searchParams } = new URL(request.url);
+    const activeOnly = searchParams.get("active") !== "false";
+
+    let query = supabase
+      .from("user_sessions")
+      .select("id, user_id, ip_address, device, location, started_at, ended_at, is_active")
+      .order("started_at", { ascending: false });
+
+    if (activeOnly) {
+      query = query.eq("is_active", true);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json(data ?? []);
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }

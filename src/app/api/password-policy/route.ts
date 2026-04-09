@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 
 // GET /api/password-policy?role=<role>
 export async function GET(request: NextRequest) {
   try {
     const role = request.nextUrl.searchParams.get("role");
-
+    const supabase = await createClient();
     // If role is specified, fetch that specific policy
     if (role) {
       const { data, error } = await supabase
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    const supabase = await createClient();
     // Check if policy already exists for this role
     const { data: existingPolicy } = await supabase
       .from("password_policy")
@@ -318,7 +318,7 @@ export async function PUT(request: NextRequest) {
     if (body.store_reversible_encryption !== undefined)
       updateData.store_reversible_encryption = body.store_reversible_encryption;
     if (body.updated_by !== undefined) updateData.updated_by = body.updated_by;
-
+    const supabase = await createClient();
     // Update policy
     const { data, error } = await supabase
       .from("password_policy")
@@ -378,7 +378,7 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-
+    const supabase = await createClient();
     // Check if policy exists before deleting
     const { data: existingPolicy } = await supabase
       .from("password_policy")

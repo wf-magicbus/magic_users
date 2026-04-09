@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 // GET /api/lockout-policy
 export async function GET(_request: NextRequest) {
   try {
+    const supabase = await createClient();
     // Fetch the singleton lockout policy record
     const { data, error } = await supabase
       .from("account_lockout_policy")
@@ -43,11 +44,11 @@ export async function GET(_request: NextRequest) {
     );
   }
 }
-// PUT /api/lockout-policy
+// PUT /api/lockout-policy/[id]
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-
+    console.log("Received request body for updating lockout policy:", body);
     // Validate input fields
     const {
       lockout_duration_minutes,
@@ -96,8 +97,9 @@ export async function PUT(request: NextRequest) {
     if (reset_counter_after_minutes !== undefined)
       updateData.reset_counter_after_minutes = reset_counter_after_minutes;
     if (updated_by !== undefined) updateData.updated_by = updated_by;
-
+    console.log("Update data for lockout policy:", updateData);
     // Update the singleton policy record
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("account_lockout_policy")
       .update(updateData)
