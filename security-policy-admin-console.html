@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Policy Admin Console</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <style>
+    :root {
+      --color-white: #ffffff;
+      --color-off-white: #fdfaf0;
+      --color-cream: #fbf4de;
+      --color-soft-yellow: #f3d77b;
+      --color-yellow: #e7b93e;
+      --color-yellow-dark: #c99618;
+      --color-yellow-deep: #8b6a12;
+      --color-text: #1f2430;
+      --color-text-secondary: #5f6675;
+      --color-text-faint: #8a91a1;
+      --color-border: rgba(139, 106, 18, 0.18);
+      --color-card-border: rgba(139, 106, 18, 0.12);
+      --color-background: #f6f7fb;
+      --color-surface: #ffffff;
+      --color-surface-alt: #fbf7ea;
+      --color-primary: #e7b93e;
+      --color-primary-hover: #d9aa2f;
+      --color-primary-active: #c2911a;
+      --color-success: #1d8f57;
+      --color-error: #c53f3f;
+      --color-warning: #c27a10;
+      --shadow-sm: 0 2px 6px rgba(16, 24, 40, 0.05), 0 1px 2px rgba(16, 24, 40, 0.04);
+      --shadow-md: 0 12px 28px rgba(16, 24, 40, 0.08), 0 2px 8px rgba(16, 24, 40, 0.05);
+      --shadow-lg: 0 24px 44px rgba(16, 24, 40, 0.12), 0 8px 18px rgba(16, 24, 40, 0.08);
+      --radius-sm: 8px;
+      --radius-base: 12px;
+      --radius-md: 14px;
+      --radius-lg: 18px;
+      --radius-full: 9999px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--color-background);
+      color: var(--color-text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+    .app-container {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(231, 185, 62, 0.10), transparent 22%),
+        linear-gradient(180deg, #f8f9fc 0%, #f3f5fa 100%);
+    }
+    .header {
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid rgba(31, 36, 48, 0.08);
+      padding: 18px 32px;
+      box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .header-content {
+      max-width: 1440px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;
+    }
+    .header-title { display: flex; align-items: center; gap: 16px; }
+    .header-icon {
+      width: 46px; height: 46px; background: linear-gradient(145deg, var(--color-primary), var(--color-yellow-dark));
+      border-radius: 13px; display: flex; align-items: center; justify-content: center;
+      color: #fff; font-weight: 800; font-size: 16px; letter-spacing: 0.08em; box-shadow: var(--shadow-sm);
+    }
+    .header-title h1 { font-size: 24px; font-weight: 800; color: var(--color-text); letter-spacing: -0.02em; }
+    .header-subtitle { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+    .main-content { max-width: 1440px; margin: 0 auto; padding: 32px; }
+    .tabs-container {
+      background: rgba(255,255,255,0.82); border-radius: 18px; padding: 8px; display: inline-flex; gap: 6px;
+      box-shadow: var(--shadow-sm); margin-bottom: 28px; border: 1px solid rgba(31, 36, 48, 0.08); flex-wrap: wrap;
+      backdrop-filter: blur(10px);
+    }
+    .tab-button {
+      padding: 10px 18px; background: transparent; border: none; border-radius: 12px; cursor: pointer;
+      font-size: 14px; font-weight: 700; color: var(--color-text-secondary); transition: all 0.2s ease;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .tab-button:hover { background: rgba(231, 185, 62, 0.10); color: var(--color-text); }
+    .tab-button.active { background: var(--color-primary); color: #fff; box-shadow: var(--shadow-sm); }
+    .tab-icon { font-size: 15px; }
+    .section-card {
+      background: rgba(255,255,255,0.94); border-radius: var(--radius-lg); padding: 28px; box-shadow: var(--shadow-md);
+      border: 1px solid rgba(31, 36, 48, 0.08); margin-bottom: 24px; backdrop-filter: blur(10px);
+    }
+    .section-header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid rgba(31, 36, 48, 0.08); }
+    .section-title { font-size: 20px; font-weight: 800; color: var(--color-text); margin-bottom: 6px; letter-spacing: -0.02em; }
+    .section-description { font-size: 14px; color: var(--color-text-secondary); }
+    .form-field { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-size: 13px; font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 6px; }
+    .form-input, .form-select, .form-textarea {
+      padding: 11px 14px; border: 1px solid rgba(31, 36, 48, 0.10); border-radius: var(--radius-base);
+      font-size: 14px; background: #ffffff; color: var(--color-text); transition: all 0.2s ease;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.02);
+    }
+    .form-textarea { min-height: 96px; resize: vertical; }
+    .form-input:focus, .form-select:focus, .form-textarea:focus, .search-input:focus, .filter-select:focus {
+      outline: none; border-color: rgba(231, 185, 62, 0.85); box-shadow: 0 0 0 4px rgba(231, 185, 62, 0.18);
+    }
+    .form-input:disabled, .form-select:disabled, .form-textarea:disabled {
+      opacity: 0.6; cursor: not-allowed; background: #f5f1e7;
+    }
+    .checkbox-wrapper {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: rgba(231, 185, 62, 0.08);
+      border-radius: var(--radius-base); border: 1px solid rgba(231, 185, 62, 0.16);
+    }
+    .checkbox-input { width: 18px; height: 18px; cursor: pointer; accent-color: var(--color-primary); }
+    .checkbox-label { font-size: 14px; color: var(--color-text); cursor: pointer; }
+    .btn {
+      padding: 10px 18px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+      min-height: 42px;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--color-primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--color-primary-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+    .btn-secondary { background: #fffaf0; color: var(--color-text); border: 1px solid rgba(31, 36, 48, 0.08); }
+    .btn-secondary:hover:not(:disabled) { background: #f9f1d9; }
+    .btn-danger { background: #fff1f1; color: var(--color-error); border: 1px solid rgba(197, 63, 63, 0.16); }
+    .btn-danger:hover:not(:disabled) { background: #ffe1e1; transform: translateY(-1px); }
+    .table-container {
+      overflow-x: auto; margin-top: 20px; border-radius: 16px; border: 1px solid rgba(31, 36, 48, 0.08);
+      background: var(--color-white);
+    }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table thead { background: #faf6ea; }
+    .data-table th {
+      padding: 14px 16px; text-align: left; font-size: 12px; font-weight: 800; color: var(--color-text-secondary);
+      border-bottom: 1px solid rgba(31, 36, 48, 0.08); white-space: nowrap; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .data-table td {
+      padding: 14px 16px; font-size: 14px; color: var(--color-text); border-bottom: 1px solid rgba(31, 36, 48, 0.06);
+      vertical-align: top;
+    }
+    .data-table tbody tr { transition: background 0.2s ease; }
+    .data-table tbody tr:hover { background: #fcfbf7; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: var(--radius-full);
+      font-size: 12px; font-weight: 700;
+    }
+    .status-active { background: rgba(29, 143, 87, 0.10); color: var(--color-success); border: 1px solid rgba(29, 143, 87, 0.16); }
+    .status-locked { background: rgba(197, 63, 63, 0.10); color: var(--color-error); border: 1px solid rgba(197, 63, 63, 0.16); }
+    .status-pending { background: rgba(194, 122, 16, 0.10); color: var(--color-warning); border: 1px solid rgba(194, 122, 16, 0.16); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .dot-green { background: #22c55e; }
+    .dot-red { background: #ef4444; }
+    .dot-yellow { background: #f59e0b; }
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.36); display: flex; align-items: center; justify-content: center;
+      z-index: 1000; animation: fadeIn 0.2s ease; padding: 20px;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal-content {
+      background: var(--color-white); border-radius: 20px; padding: 28px; max-width: 700px; width: 100%;
+      max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-lg); animation: slideUp 0.3s ease;
+      border: 1px solid rgba(31, 36, 48, 0.08);
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: translateY(0);} }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px;
+      border-bottom: 1px solid rgba(31, 36, 48, 0.08);
+    }
+    .modal-title { font-size: 20px; font-weight: 800; color: var(--color-text); }
+    .close-button {
+      width: 34px; height: 34px; border: none; background: #f6f7fb; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; color: var(--color-text-secondary); font-size: 20px;
+      transition: all 0.2s ease;
+    }
+    .close-button:hover { background: #eceff5; color: var(--color-text); }
+    .search-filter-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-input {
+      flex: 1; min-width: 200px; padding: 11px 14px 11px 42px; border: 1px solid rgba(31, 36, 48, 0.10);
+      border-radius: var(--radius-base); font-size: 14px; background: var(--color-white); color: var(--color-text);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b6a12' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 14px center;
+    }
+    .filter-select {
+      padding: 11px 14px; border: 1px solid rgba(31, 36, 48, 0.10); border-radius: var(--radius-base); font-size: 14px;
+      background: var(--color-white); color: var(--color-text); min-width: 150px;
+    }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--color-text-secondary); }
+    .empty-state-icon { font-size: 40px; margin-bottom: 16px; opacity: 0.7; }
+    .empty-state-text { font-size: 16px; margin-bottom: 8px; color: var(--color-text); font-weight: 700; }
+    .empty-state-subtext { font-size: 14px; color: var(--color-text-secondary); }
+    .info-card {
+      background: linear-gradient(135deg, rgba(231, 185, 62, 0.08), rgba(231, 185, 62, 0.03));
+      border: 1px solid rgba(231, 185, 62, 0.18); border-radius: 16px; padding: 16px 18px;
+      margin-top: 20px; display: flex; gap: 12px;
+    }
+    .info-icon { color: var(--color-yellow-dark); font-size: 18px; flex-shrink: 0; }
+    .info-content { flex: 1; }
+    .info-title { font-size: 14px; font-weight: 800; color: var(--color-text); margin-bottom: 4px; }
+    .info-text { font-size: 13px; color: var(--color-text-secondary); line-height: 1.55; }
+    .stats-row { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; }
+    .stat-card {
+      flex: 1; min-width: 220px; background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%); border-radius: 16px; border: 1px solid rgba(31, 36, 48, 0.08);
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .stat-label { font-size: 12px; color: var(--color-text-secondary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 21px; font-weight: 800; color: var(--color-text); letter-spacing: -0.02em; }
+    .stat-sub { font-size: 11px; color: var(--color-text-faint); }
+    .policy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
+    .policy-card {
+      background: var(--color-white); border: 1px solid rgba(31, 36, 48, 0.08); border-radius: 16px;
+      padding: 18px; transition: all 0.2s ease; box-shadow: var(--shadow-sm);
+    }
+    .policy-card:hover { box-shadow: var(--shadow-md); border-color: rgba(231, 185, 62, 0.28); }
+    .policy-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+    .policy-name { font-size: 15px; font-weight: 800; color: var(--color-text); margin-bottom: 6px; }
+    .policy-scope {
+      font-size: 11px; color: var(--color-yellow-deep); background: rgba(231, 185, 62, 0.10); border: 1px solid rgba(231, 185, 62, 0.22);
+      border-radius: var(--radius-full); padding: 4px 10px; white-space: nowrap; font-weight: 800;
+    }
+    .policy-description { font-size: 12px; color: var(--color-text-secondary); margin-bottom: 12px; min-height: 36px; }
+    .policy-controls { display: flex; flex-direction: column; gap: 10px; }
+    .policy-row { display: flex; flex-direction: column; gap: 6px; }
+    .policy-inline { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .policy-inline .form-input, .policy-inline .form-select { flex: 1; min-width: 140px; }
+    .policy-tag {
+      display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--color-text-secondary);
+      padding: 5px 10px; border-radius: var(--radius-full); background: #faf6ea; border: 1px solid rgba(31, 36, 48, 0.08);
+      width: fit-content; font-weight: 700;
+    }
+    .subsection-title { margin-top: 30px; margin-bottom: 14px; font-size: 18px; font-weight: 800; color: var(--color-text); letter-spacing: -0.02em; }
+    code { background: #faf1cd; color: #7c5e0d; padding: 3px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .group-list { display: grid; gap: 16px; margin-top: 20px; }
+    .group-card {
+      background: var(--color-white); border: 1px solid rgba(31, 36, 48, 0.08); border-radius: 18px;
+      padding: 20px; box-shadow: var(--shadow-sm);
+    }
+    .group-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .group-name { font-size: 17px; font-weight: 800; color: var(--color-text); }
+    .group-meta { font-size: 12px; color: var(--color-text-secondary); margin-top: 4px; }
+    .group-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    @media (max-width: 768px) {
+      .main-content { padding: 16px; }
+      .header { padding: 16px 20px; }
+      .section-card { padding: 20px; }
+      .tabs-container { width: 100%; overflow-x: auto; }
+      .search-filter-bar { flex-direction: column; }
+      .search-input, .filter-select, .btn { width: 100%; }
+      .policy-grid { grid-template-columns: 1fr; }
+      .header-title h1 { font-size: 20px; }
+      .header-content, .header-title, .group-card-header { align-items: stretch; }
+    }
+  </style>
+</head>
+<body>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo } = React;
+
+    const ROLESLIST = ['All Users', 'Admin', 'User'];
+
+    const SAMPLEUSERS = [
+      { id: 1, username: 'alice.admin', email: 'alice@company.com', role: 'Admin', status: 'active', lastLogin: '2026-03-12 09:30', failedAttempts: 0, lastActiveDate: '2026-04-06' },
+      { id: 2, username: 'bob.manager', email: 'bob@company.com', role: 'User', status: 'active', lastLogin: '2026-03-11 14:20', failedAttempts: 0, lastActiveDate: '2026-04-06' },
+      { id: 3, username: 'carol.auditor', email: 'carol@company.com', role: 'User', status: 'active', lastLogin: '2026-03-10 11:45', failedAttempts: 0, lastActiveDate: '2026-03-10' },
+      { id: 4, username: 'dave.user', email: 'dave@company.com', role: 'User', status: 'locked', lastLogin: '2026-03-09 08:15', failedAttempts: 6, lastActiveDate: '2026-03-09' },
+      { id: 5, username: 'eve.support', email: 'eve@company.com', role: 'User', status: 'pending', lastLogin: 'Never', failedAttempts: 0, lastActiveDate: null },
+    ];
+
+    const SAMPLESESSIONS = [
+      { id: 101, username: 'alice.admin', ip: '10.0.0.12', device: 'Chrome on macOS', location: 'Bengaluru, IN', startedAt: '2026-03-12 09:32', lastSeen: '2026-03-12 10:10', status: 'active' },
+      { id: 102, username: 'bob.manager', ip: '10.0.0.23', device: 'Edge on Windows', location: 'Hyderabad, IN', startedAt: '2026-03-12 09:05', lastSeen: '2026-03-12 09:55', status: 'active' },
+      { id: 103, username: 'carol.auditor', ip: '10.0.0.45', device: 'Firefox on Linux', location: 'Pune, IN', startedAt: '2026-03-11 16:20', lastSeen: '2026-03-11 17:05', status: 'expired' },
+    ];
+
+    const BASE_POLICIES = [
+      { category: 'Password Policy', name: 'Minimum password length characters', description: 'Customised length of characters', enabled: true, type: 'number', unit: 'characters', value: 12, min: 1 },
+      { category: 'Password Policy', name: 'Complexity Enabled', description: 'Enable Disable', enabled: true, type: 'toggle', value: true },
+      { category: 'Password Policy', name: 'Password history passwords remembered', description: 'Customised last password remember', enabled: true, type: 'number', unit: 'passwords remembered', value: 5, min: 0 },
+      { category: 'Password Policy', name: 'Maximum password age days', description: 'Customised password age days', enabled: true, type: 'number', unit: 'days', value: 90, min: 0 },
+      { category: 'Password Policy', name: 'Minimum password age day', description: 'Customised password age days', enabled: true, type: 'number', unit: 'days', value: 1, min: 0 },
+      { category: 'Password Policy', name: 'Store passwords using reversible encryption Disabled', description: 'Enable Disable', enabled: false, type: 'toggle', value: false },
+      { category: 'Account Lockout Policy', name: 'Lockout threshold attempts', description: 'Customised no of attempts', enabled: true, type: 'number', unit: 'attempts', value: 5, min: 1 },
+      { category: 'Account Lockout Policy', name: 'Lockout duration minutes', description: 'Customised Minutes', enabled: true, type: 'number', unit: 'minutes', value: 30, min: 0 },
+      { category: 'Account Lockout Policy', name: 'Reset counter after minutes', description: 'Customised Minutes', enabled: true, type: 'number', unit: 'minutes', value: 15, min: 0 },
+      { category: 'Administrative Controls', name: 'Separate admin accounts no daily-use admin', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Administrative Controls', name: 'Admin membership strictly limited', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Administrative Controls', name: 'Protected Users group used for high-privilege accounts', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Administrative Controls', name: 'Disable legacy admin accounts rename built-in Administrator', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Logon Restrictions', name: 'Only Admins allowed local admin logon', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Logon Restrictions', name: 'RDP restricted to admin group only', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Logon Restrictions', name: 'Deny logon locally to service accounts', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Endpoint Protection', name: 'Microsoft Defender enabled disable', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Endpoint Protection', name: 'Real-time protection enabled disable', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Firewall', name: 'Windows Firewall enabled Domain, Private, Public', description: 'Configurable', enabled: true, type: 'select', value: 'Domain, Private, Public', options: ['Domain, Private, Public', 'Domain Only', 'Private Only', 'Public Only', 'Disabled'] },
+      { category: 'Firewall', name: 'Default inbound Block', description: 'Configurable', enabled: true, type: 'select', value: 'Block', options: ['Block', 'Allow'] },
+      { category: 'Hardening', name: 'Local admin accounts removed Rename', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Hardening', name: 'Windows features Configurable', description: 'Windows features Configurable', enabled: true, type: 'textarea', value: '' },
+      { category: 'Hardening', name: 'LAPS implemented Local Administrator Password Solution', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Hardening', name: 'UAC enabled Always Notify for admins', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Hardening', name: 'PowerShell logging enabled', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Hardening', name: 'Disable removable storage if required', description: '', enabled: false, type: 'toggle', value: false },
+      { category: 'Hardening', name: 'BitLocker enabled disable', description: '', enabled: true, type: 'toggle', value: true },
+      { category: 'Removable Storage', name: 'All Removable Storage classes Deny all access Enabled', description: 'USB Mobile Disk Drive access limitation on system configurable', enabled: true, type: 'toggle', value: true },
+      { category: 'Removable Storage', name: 'Removable Disks Deny read access Enabled', description: 'USB Mobile Disk Drive access limitation on system configurable', enabled: true, type: 'toggle', value: true },
+      { category: 'Removable Storage', name: 'Removable Disks Deny write access Enabled', description: 'USB Mobile Disk Drive access limitation on system configurable', enabled: true, type: 'toggle', value: true },
+      { category: 'Removable Storage', name: 'CD and DVD Deny write access Enabled', description: 'USB Mobile Disk Drive access limitation on system configurable', enabled: true, type: 'toggle', value: true },
+      { category: 'Removable Storage', name: 'WPD Devices phones Deny write access Enabled', description: 'USB Mobile Disk Drive access limitation on system configurable', enabled: true, type: 'toggle', value: true },
+      { category: 'URL BlockAllow Lists', name: 'Configure Blocked URLs', description: 'septrate URLs and WEB categories to be allowed or blocked', enabled: true, type: 'textarea', value: '' },
+      { category: 'URL BlockAllow Lists', name: 'Configure Allowed URLs', description: 'septrate URLs and WEB categories to be allowed or blocked', enabled: true, type: 'textarea', value: '' },
+      { category: 'URL BlockAllow Lists', name: 'Blocks categories', description: 'septrate URLs and WEB categories to be allowed or blocked', enabled: true, type: 'textarea', value: '' },
+      { category: 'URL BlockAllow Lists', name: 'Allowed categories', description: 'septrate URLs and WEB categories to be allowed or blocked', enabled: true, type: 'textarea', value: '' },
+    ];
+
+    function clonePoliciesForScope(scope) {
+      return BASE_POLICIES.map((policy, index) => ({
+        id: `${scope}-${index + 1}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        scope,
+        ...policy,
+        options: policy.options ? [...policy.options] : undefined,
+      }));
+    }
+
+    function createDefaultPolicies() {
+      return [...clonePoliciesForScope('Admin'), ...clonePoliciesForScope('User')];
+    }
+
+    function getTodayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function App() {
+      const [activeTab, setActiveTab] = useState('users');
+      const [users, setUsers] = useState(SAMPLEUSERS);
+      const [policies, setPolicies] = useState(createDefaultPolicies());
+      const [groups, setGroups] = useState([]);
+      const [searchTerm, setSearchTerm] = useState('');
+      const [filterRole, setFilterRole] = useState('All Users');
+      const [policySearch, setPolicySearch] = useState('');
+      const [policyScopeFilter, setPolicyScopeFilter] = useState('All');
+      const [policyCategoryFilter, setPolicyCategoryFilter] = useState('All');
+      const [editingUser, setEditingUser] = useState(null);
+      const [editingGroup, setEditingGroup] = useState(null);
+      const handleDeleteGroup = (groupId) => {
+        if (confirm('Are you sure you want to delete this group and all its policies?')) {
+          const groupToDelete = groups.find((g) => g.id === groupId);
+          if (groupToDelete) {
+            setGroups((prev) => prev.filter((g) => g.id !== groupId));
+            setPolicies((prev) => prev.filter((p) => p.scope !== groupToDelete.name));
+          }
+        }
+      };;
+      const [sessions, setSessions] = useState(SAMPLESESSIONS);
+      const [sessionSearch, setSessionSearch] = useState('');
+      const [sessionStatusFilter, setSessionStatusFilter] = useState('all');
+      const [groupSearch, setGroupSearch] = useState('');
+
+      const filteredUsers = users.filter((u) => {
+        const q = searchTerm.toLowerCase();
+        const matchesSearch = u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+        const matchesRole = filterRole === 'All Users' || u.role === filterRole;
+        return matchesSearch && matchesRole;
+      });
+
+      const today = getTodayISO();
+      const todaysActiveUserIds = new Set(users.filter((u) => u.lastActiveDate === today && u.status === 'active').map((u) => u.id));
+      const todaysActiveCount = todaysActiveUserIds.size;
+
+      const handleSaveUser = (user) => {
+        if (user.id) {
+          setUsers(users.map((u) => (u.id === user.id ? user : u)));
+        } else {
+          setUsers([...users, { ...user, id: Date.now(), lastLogin: 'Never', failedAttempts: 0, lastActiveDate: null }]);
+        }
+        setEditingUser(null);
+      };
+
+      const handleDeleteUser = (id) => {
+        if (confirm('Are you sure you want to delete this user?')) {
+          setUsers(users.filter((u) => u.id !== id));
+        }
+      };
+
+      const filteredSessions = useMemo(() => {
+        return sessions.filter((s) => {
+          const q = sessionSearch.toLowerCase();
+          const matches = s.username.toLowerCase().includes(q) || s.ip.toLowerCase().includes(q) || s.device.toLowerCase().includes(q);
+          const statusMatch = sessionStatusFilter === 'all' || s.status === sessionStatusFilter;
+          return matches && statusMatch;
+        });
+      }, [sessions, sessionSearch, sessionStatusFilter]);
+
+      const activeSessionsCount = sessions.filter((s) => s.status === 'active').length;
+
+      const handleTerminateSession = (id) => {
+        if (confirm('Terminate this session?')) {
+          setSessions(sessions.map((s) => (s.id === id ? { ...s, status: 'terminated', lastSeen: 'Just now' } : s)));
+        }
+      };
+
+      const handleTerminateAllActive = () => {
+        if (confirm('Terminate all active sessions?')) {
+          setSessions(sessions.map((s) => (s.status === 'active' ? { ...s, status: 'terminated', lastSeen: 'Just now' } : s)));
+        }
+      };
+
+      const policyCategories = ['All', ...new Set(policies.map((p) => p.category))];
+
+      const filteredPolicies = useMemo(() => {
+        return policies.filter((policy) => {
+          const q = policySearch.toLowerCase();
+          const matchesSearch = policy.name.toLowerCase().includes(q) || policy.category.toLowerCase().includes(q) || policy.description.toLowerCase().includes(q);
+          const matchesScope = policyScopeFilter === 'All' || policy.scope === policyScopeFilter;
+          const matchesCategory = policyCategoryFilter === 'All' || policy.category === policyCategoryFilter;
+          return matchesSearch && matchesScope && matchesCategory;
+        });
+      }, [policies, policySearch, policyScopeFilter, policyCategoryFilter]);
+
+      const handlePolicyEnabledChange = (id, checked) => {
+        setPolicies((prev) => prev.map((p) => {
+          if (p.id !== id) return p;
+          return { ...p, enabled: checked, value: p.type === 'toggle' ? checked : p.value };
+        }));
+      };
+
+      const handlePolicyValueChange = (id, value) => {
+        setPolicies((prev) => prev.map((p) => (p.id === id ? { ...p, value } : p)));
+      };
+
+      const handleResetPolicies = () => {
+        const groupPolicies = policies.filter((p) => !['Admin', 'User'].includes(p.scope));
+        setPolicies([...createDefaultPolicies(), ...groupPolicies]);
+      };
+
+      const handleSaveGroup = (groupData) => {
+        if (groupData.id) {
+          const existingGroup = groups.find((g) => g.id === groupData.id);
+          setGroups((prev) => prev.map((g) => (g.id === groupData.id ? { ...g, name: groupData.name } : g)));
+          if (existingGroup && existingGroup.name !== groupData.name) {
+            setPolicies((prev) => prev.map((p) => (p.scope === existingGroup.name ? { ...p, scope: groupData.name } : p)));
+          }
+        } else {
+          const newGroupId = `group-${Date.now()}`;
+          const newGroup = { id: newGroupId, name: groupData.name, createdAt: new Date().toLocaleString() };
+          const groupPoliciesSet = clonePoliciesForScope(groupData.name);
+          setGroups((prev) => [...prev, newGroup]);
+          setPolicies((prev) => [...prev, ...groupPoliciesSet]);
+        }
+        setEditingGroup(null);
+      };
+
+      const groupList = useMemo(() => {
+        return groups.filter((group) => group.name.toLowerCase().includes(groupSearch.toLowerCase()));
+      }, [groups, groupSearch]);
+
+      const enabledPoliciesCount = policies.filter((p) => p.enabled).length;
+      const adminPoliciesCount = policies.filter((p) => p.scope === 'Admin').length;
+      const userPoliciesCount = policies.filter((p) => p.scope === 'User').length;
+      const groupPoliciesCount = policies.filter((p) => !['Admin', 'User'].includes(p.scope)).length;
+
+      return (
+        <div className="app-container">
+          <header className="header">
+            <div className="header-content">
+              <div className="header-title">
+                <div className="header-icon">SPA</div>
+                <div>
+                  <h1>Security Policy Admin Console</h1>
+                  <div className="header-subtitle">Enterprise user management, policy control, and session governance</div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <main className="main-content">
+            <div className="tabs-container">
+              <button className={`tab-button ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}><span className="tab-icon">◉</span>Users</button>
+              <button className={`tab-button ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => setActiveTab('policies')}><span className="tab-icon">◆</span>Policies</button>
+              <button className={`tab-button ${activeTab === 'groups' ? 'active' : ''}`} onClick={() => setActiveTab('groups')}><span className="tab-icon">▣</span>Groups</button>
+              <button className={`tab-button ${activeTab === 'sessions' ? 'active' : ''}`} onClick={() => setActiveTab('sessions')}><span className="tab-icon">◌</span>Active Sessions</button>
+            </div>
+
+            {activeTab === 'users' && (
+              <UsersTab
+                users={filteredUsers}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                filterRole={filterRole}
+                setFilterRole={setFilterRole}
+                todaysActiveCount={todaysActiveCount}
+                onEdit={setEditingUser}
+                onDelete={handleDeleteUser}
+                onAdd={() => setEditingUser({ username: '', email: '', role: 'All Users', status: 'active' })}
+              />
+            )}
+
+            {activeTab === 'policies' && (
+              <PoliciesTab
+                policies={filteredPolicies}
+                allPolicies={policies}
+                search={policySearch}
+                setSearch={setPolicySearch}
+                scopeFilter={policyScopeFilter}
+                setScopeFilter={setPolicyScopeFilter}
+                categoryFilter={policyCategoryFilter}
+                setCategoryFilter={setPolicyCategoryFilter}
+                categories={policyCategories}
+                onEnabledChange={handlePolicyEnabledChange}
+                onValueChange={handlePolicyValueChange}
+                onReset={handleResetPolicies}
+                enabledPoliciesCount={enabledPoliciesCount}
+                adminPoliciesCount={adminPoliciesCount}
+                userPoliciesCount={userPoliciesCount}
+                groupPoliciesCount={groupPoliciesCount}
+                groups={groups}
+              />
+            )}
+
+            {activeTab === 'groups' && (
+              <GroupsTab
+                groups={groupList}
+                allPolicies={policies}
+                search={groupSearch}
+                setSearch={setGroupSearch}
+                onAdd={() => setEditingGroup({ name: '' })}
+                onEdit={setEditingGroup}
+                onEnabledChange={handlePolicyEnabledChange}
+                onValueChange={handlePolicyValueChange} onDeleteGroup={handleDeleteGroup}
+              />
+            )}
+
+            {activeTab === 'sessions' && (
+              <ActiveSessionsTab
+                sessions={filteredSessions}
+                totalActive={activeSessionsCount}
+                search={sessionSearch}
+                setSearch={setSessionSearch}
+                statusFilter={sessionStatusFilter}
+                setStatusFilter={setSessionStatusFilter}
+                onTerminate={handleTerminateSession}
+                onTerminateAll={handleTerminateAllActive}
+              />
+            )}
+          </main>
+
+          {editingUser && <UserModal user={editingUser} onSave={handleSaveUser} onClose={() => setEditingUser(null)} />}
+          {editingGroup && <GroupModal group={editingGroup} onSave={handleSaveGroup} onClose={() => setEditingGroup(null)} />}
+        </div>
+      );
+    }
+
+    function UsersTab({ users, searchTerm, setSearchTerm, filterRole, setFilterRole, todaysActiveCount, onEdit, onDelete, onAdd }) {
+      return (
+        <div className="section-card">
+          <div className="section-header">
+            <h2 className="section-title">User Management</h2>
+            <p className="section-description">Manage user accounts and access visibility</p>
+          </div>
+
+          <div className="search-filter-bar">
+            <input type="text" className="search-input" placeholder="Search by username or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+            <select className="filter-select" value={filterRole} onChange={(e) => setFilterRole(e.target.value)}>
+              {ROLESLIST.map((role) => <option key={role} value={role}>{role}</option>)}
+            </select>
+            <button className="btn btn-primary" onClick={onAdd}>Add User</button>
+          </div>
+
+          <div className="stats-row">
+            <div className="stat-card"><div className="stat-label">Total Users</div><div className="stat-value">{users.length}</div><div className="stat-sub">Currently visible with applied filters</div></div>
+            <div className="stat-card"><div className="stat-label">Daily Active Users Today</div><div className="stat-value">{todaysActiveCount}</div><div className="stat-sub">Unique users with activity recorded for today</div></div>
+          </div>
+
+          {users.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">🔍</div>
+              <div className="empty-state-text">No users found</div>
+              <div className="empty-state-subtext">Try adjusting your search or filters</div>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Failed Attempts</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {users.map((user) => (
+                    <tr key={user.id}>
+                      <td><strong>{user.username}</strong></td>
+                      <td>{user.email}</td>
+                      <td><code>{user.role}</code></td>
+                      <td><span className={`status-badge ${user.status === 'active' ? 'status-active' : user.status === 'locked' ? 'status-locked' : 'status-pending'}`}><span className={`dot ${user.status === 'active' ? 'dot-green' : user.status === 'locked' ? 'dot-red' : 'dot-yellow'}`}></span>{user.status}</span></td>
+                      <td>{user.lastLogin}</td>
+                      <td><span style={{ color: user.failedAttempts > 0 ? 'var(--color-error)' : 'inherit' }}>{user.failedAttempts}</span></td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button className="btn btn-secondary" onClick={() => onEdit(user)}>Edit</button>
+                          <button className="btn btn-danger" onClick={() => onDelete(user.id)}>Delete</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="info-card">
+            <div className="info-icon">ℹ️</div>
+            <div className="info-content">
+              <div className="info-title">User Management Tips</div>
+              <div className="info-text">Users can be filtered by role, edited, and removed from this section. Locked accounts and failed attempts remain visible for review.</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function PoliciesTab({ policies, allPolicies, search, setSearch, scopeFilter, setScopeFilter, categoryFilter, setCategoryFilter, categories, onEnabledChange, onValueChange, onReset, enabledPoliciesCount, adminPoliciesCount, userPoliciesCount, groupPoliciesCount, groups }) {
+      const groupedPolicies = policies.reduce((acc, policy) => {
+        if (!acc[policy.category]) acc[policy.category] = [];
+        acc[policy.category].push(policy);
+        return acc;
+      }, {});
+
+      const scopeOptions = ['All', 'Admin', 'User', ...groups.map((g) => g.name)];
+
+      return (
+        <div className="section-card">
+          <div className="section-header">
+            <h2 className="section-title">Policies</h2>
+            <p className="section-description">Enable policies and configure them with dedicated filters for User, Admin, and Group scope.</p>
+          </div>
+
+          <div className="search-filter-bar">
+            <input type="text" className="search-input" placeholder="Search policies by name, category, or description..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select className="filter-select" value={scopeFilter} onChange={(e) => setScopeFilter(e.target.value)}>
+              {scopeOptions.map((option) => <option key={option} value={option}>{option === 'All' ? 'All Roles' : option}</option>)}
+            </select>
+            <select className="filter-select" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+              {categories.map((category) => <option key={category} value={category}>{category}</option>)}
+            </select>
+            <button className="btn btn-secondary" onClick={onReset}>Reset Policies</button>
+          </div>
+
+          <div className="stats-row">
+            <div className="stat-card"><div className="stat-label">Total Policies</div><div className="stat-value">{allPolicies.length}</div><div className="stat-sub">All configured policy records</div></div>
+            <div className="stat-card"><div className="stat-label">Enabled Policies</div><div className="stat-value">{enabledPoliciesCount}</div><div className="stat-sub">Policies currently enabled</div></div>
+            <div className="stat-card"><div className="stat-label">Admin Scope</div><div className="stat-value">{adminPoliciesCount}</div><div className="stat-sub">Policies available to admin</div></div>
+            <div className="stat-card"><div className="stat-label">User Scope</div><div className="stat-value">{userPoliciesCount}</div><div className="stat-sub">Policies available to user</div></div>
+            <div className="stat-card"><div className="stat-label">Group Scope</div><div className="stat-value">{groupPoliciesCount}</div><div className="stat-sub">Policies assigned to created groups</div></div>
+          </div>
+
+          {Object.keys(groupedPolicies).length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📭</div>
+              <div className="empty-state-text">No policies found</div>
+              <div className="empty-state-subtext">Try adjusting policy search or filters</div>
+            </div>
+          ) : (
+            Object.entries(groupedPolicies).map(([category, categoryPolicies]) => (
+              <div key={category}>
+                <h3 className="subsection-title">{category}</h3>
+                <div className="policy-grid">
+                  {categoryPolicies.map((policy) => <PolicyCard key={policy.id} policy={policy} onEnabledChange={onEnabledChange} onValueChange={onValueChange} />)}
+                </div>
+              </div>
+            ))
+          )}
+
+          <div className="info-card">
+            <div className="info-icon">🔐</div>
+            <div className="info-content">
+              <div className="info-title">Policy Scope Filter</div>
+              <div className="info-text">Every policy is available for Admin and User scope by default, and each newly created group also receives the complete policy set for editing at any time.</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function GroupsTab({ groups, allPolicies, search, setSearch, onAdd, onEdit, onEnabledChange, onValueChange, onDeleteGroup }) {
+      const [expandedGroup, setExpandedGroup] = useState(null);
+      const [groupPolicySearch, setGroupPolicySearch] = useState('');
+      const [groupCategoryFilter, setGroupCategoryFilter] = useState('All');
+
+      const currentGroupPolicies = useMemo(() => {
+        if (!expandedGroup) return [];
+        return allPolicies.filter((policy) => {
+          const matchesScope = policy.scope === expandedGroup;
+          const q = groupPolicySearch.toLowerCase();
+          const matchesSearch = policy.name.toLowerCase().includes(q) || policy.category.toLowerCase().includes(q) || policy.description.toLowerCase().includes(q);
+          const matchesCategory = groupCategoryFilter === 'All' || policy.category === groupCategoryFilter;
+          return matchesScope && matchesSearch && matchesCategory;
+        });
+      }, [allPolicies, expandedGroup, groupPolicySearch, groupCategoryFilter]);
+
+      const currentCategories = ['All', ...new Set(allPolicies.filter((p) => p.scope === expandedGroup).map((p) => p.category))];
+      const groupedPolicies = currentGroupPolicies.reduce((acc, policy) => {
+        if (!acc[policy.category]) acc[policy.category] = [];
+        acc[policy.category].push(policy);
+        return acc;
+      }, {});
+
+      return (
+        <div className="section-card">
+          <div className="section-header">
+            <h2 className="section-title">Groups</h2>
+            <p className="section-description">Create groups, review all groups added earlier, and edit every policy for them whenever needed.</p>
+          </div>
+
+          <div className="search-filter-bar">
+            <input type="text" className="search-input" placeholder="Search groups by name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <button className="btn btn-primary" onClick={onAdd}>Add Group</button>
+          </div>
+
+          <div className="stats-row">
+            <div className="stat-card"><div className="stat-label">Total Groups</div><div className="stat-value">{groups.length}</div><div className="stat-sub">Groups added and available for policy editing</div></div>
+            <div className="stat-card"><div className="stat-label">Expanded Group</div><div className="stat-value">{expandedGroup || 'None'}</div><div className="stat-sub">Use View Policies to open policy controls</div></div>
+          </div>
+
+          {groups.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">📁</div>
+              <div className="empty-state-text">No groups added yet</div>
+              <div className="empty-state-subtext">Use Add Group to create a new group with the full policy set</div>
+            </div>
+          ) : (
+            <div className="group-list">
+              {groups.map((group) => {
+                const groupPolicies = allPolicies.filter((p) => p.scope === group.name);
+                const enabledCount = groupPolicies.filter((p) => p.enabled).length;
+                const isOpen = expandedGroup === group.name;
+                return (
+                  <div className="group-card" key={group.id}>
+                    <div className="group-card-header">
+                      <div>
+                        <div className="group-name">{group.name}</div>
+                        <div className="group-meta">Created: {group.createdAt} · Total Policies: {groupPolicies.length} · Enabled: {enabledCount}</div>
+                      </div>
+                      <div className="group-actions">
+                        <button className="btn btn-secondary" onClick={() => onEdit(group)}>Rename Group</button>
+                        <button className="btn btn-primary" onClick={() => setExpandedGroup(isOpen ? null : group.name)}>{isOpen ? 'Hide Policies' : 'View Policies'}</button>
+                      
+                        <button className="btn btn-danger" onClick={() => onDeleteGroup(group.id)}>Delete</button></div>
+                    </div>
+
+                    {isOpen && (
+                      <div style={{ marginTop: '20px' }}>
+                        <div className="search-filter-bar">
+                          <input type="text" className="search-input" placeholder="Search this group's policies..." value={groupPolicySearch} onChange={(e) => setGroupPolicySearch(e.target.value)} />
+                          <select className="filter-select" value={groupCategoryFilter} onChange={(e) => setGroupCategoryFilter(e.target.value)}>
+                            {currentCategories.map((category) => <option key={category} value={category}>{category}</option>)}
+                          </select>
+                        </div>
+
+                        {Object.keys(groupedPolicies).length === 0 ? (
+                          <div className="empty-state">
+                            <div className="empty-state-icon">📭</div>
+                            <div className="empty-state-text">No group policies found</div>
+                            <div className="empty-state-subtext">Try adjusting the search or category filter</div>
+                          </div>
+                        ) : (
+                          Object.entries(groupedPolicies).map(([category, categoryPolicies]) => (
+                            <div key={category}>
+                              <h3 className="subsection-title">{category}</h3>
+                              <div className="policy-grid">
+                                {categoryPolicies.map((policy) => <PolicyCard key={policy.id} policy={policy} onEnabledChange={onEnabledChange} onValueChange={onValueChange} />)}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="info-card">
+            <div className="info-icon">🧩</div>
+            <div className="info-content">
+              <div className="info-title">Group Policy Management</div>
+              <div className="info-text">Each group keeps its own full copy of all existing policies, so previously added groups remain visible and editable at any point from this tab.</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function PolicyCard({ policy, onEnabledChange, onValueChange }) {
+      return (
+        <div className="policy-card">
+          <div className="policy-card-header">
+            <div>
+              <div className="policy-name">{policy.name}</div>
+              <div className="policy-tag">{policy.enabled ? 'Enabled' : 'Disabled'}</div>
+            </div>
+            <div className="policy-scope">{policy.scope}</div>
+          </div>
+          <div className="policy-description">{policy.description || 'No additional description provided.'}</div>
+          <div className="policy-controls">
+            <div className="checkbox-wrapper">
+              <input type="checkbox" className="checkbox-input" checked={policy.enabled} onChange={(e) => onEnabledChange(policy.id, e.target.checked)} id={`policy-enabled-${policy.id}`} />
+              <label htmlFor={`policy-enabled-${policy.id}`} className="checkbox-label">Enable policy</label>
+            </div>
+
+            {policy.type === 'number' && (
+              <div className="policy-row">
+                <label className="form-label">Value</label>
+                <div className="policy-inline">
+                  <input type="number" className="form-input" value={policy.value} min={policy.min ?? 0} disabled={!policy.enabled} onChange={(e) => onValueChange(policy.id, parseInt(e.target.value || 0, 10))} />
+                  <div className="policy-tag">{policy.unit}</div>
+                </div>
+              </div>
+            )}
+
+            {policy.type === 'select' && (
+              <div className="policy-row">
+                <label className="form-label">Value</label>
+                <select className="form-select" value={policy.value} disabled={!policy.enabled} onChange={(e) => onValueChange(policy.id, e.target.value)}>
+                  {policy.options.map((option) => <option key={option} value={option}>{option}</option>)}
+                </select>
+              </div>
+            )}
+
+            {policy.type === 'textarea' && (
+              <div className="policy-row">
+                <label className="form-label">Value</label>
+                <textarea className="form-textarea" value={policy.value} disabled={!policy.enabled} onChange={(e) => onValueChange(policy.id, e.target.value)} placeholder="Enter one item per line..."></textarea>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    function ActiveSessionsTab({ sessions, totalActive, search, setSearch, statusFilter, setStatusFilter, onTerminate, onTerminateAll }) {
+      return (
+        <div className="section-card">
+          <div className="section-header">
+            <h2 className="section-title">Active Sessions</h2>
+            <p className="section-description">Monitor and manage user login sessions across devices</p>
+          </div>
+
+          <div className="search-filter-bar">
+            <input type="text" className="search-input" placeholder="Search by username, IP, or device..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <select className="filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+              <option value="all">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+              <option value="terminated">Terminated</option>
+            </select>
+            <button className="btn btn-danger" onClick={onTerminateAll} disabled={totalActive === 0}>Terminate All Active</button>
+          </div>
+
+          <div className="stats-row">
+            <div className="stat-card"><div className="stat-label">Active Sessions</div><div className="stat-value">{totalActive}</div><div className="stat-sub">Live sessions that can be terminated remotely</div></div>
+            <div className="stat-card"><div className="stat-label">Total Sessions Filtered</div><div className="stat-value">{sessions.length}</div><div className="stat-sub">Includes active, expired, and terminated sessions</div></div>
+          </div>
+
+          {sessions.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">🔍</div>
+              <div className="empty-state-text">No sessions found</div>
+              <div className="empty-state-subtext">Try adjusting your search or filters</div>
+            </div>
+          ) : (
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr><th>User</th><th>IP Address</th><th>Device</th><th>Location</th><th>Started</th><th>Last Seen</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                  {sessions.map((s) => (
+                    <tr key={s.id}>
+                      <td><strong>{s.username}</strong></td>
+                      <td>{s.ip}</td>
+                      <td>{s.device}</td>
+                      <td>{s.location}</td>
+                      <td>{s.startedAt}</td>
+                      <td>{s.lastSeen}</td>
+                      <td><span className={`status-badge ${s.status === 'active' ? 'status-active' : s.status === 'terminated' ? 'status-locked' : 'status-pending'}`}><span className={`dot ${s.status === 'active' ? 'dot-green' : s.status === 'terminated' ? 'dot-red' : 'dot-yellow'}`}></span>{s.status}</span></td>
+                      <td><button className="btn btn-danger" disabled={s.status !== 'active'} onClick={() => onTerminate(s.id)}>Terminate</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="info-card">
+            <div className="info-icon">🛑</div>
+            <div className="info-content">
+              <div className="info-title">Session Security</div>
+              <div className="info-text">Regularly review active sessions for suspicious locations or devices. Terminate unknown sessions immediately and consider forcing a password reset for affected accounts.</div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    function UserModal({ user, onSave, onClose }) {
+      const [formData, setFormData] = useState(user);
+      const handleChange = (field, value) => setFormData({ ...formData, [field]: value });
+      const handleSubmit = (e) => { e.preventDefault(); onSave(formData); };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{user.id ? 'Edit User' : 'Add New User'}</h3>
+              <button className="close-button" onClick={onClose}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="form-field">
+                <label className="form-label">Username</label>
+                <input type="text" className="form-input" value={formData.username} onChange={(e) => handleChange('username', e.target.value)} required />
+              </div>
+              <div className="form-field" style={{ marginTop: '16px' }}>
+                <label className="form-label">Email</label>
+                <input type="email" className="form-input" value={formData.email} onChange={(e) => handleChange('email', e.target.value)} required />
+              </div>
+              <div className="form-field" style={{ marginTop: '16px' }}>
+                <label className="form-label">Role</label>
+                <select className="form-select" value={formData.role} onChange={(e) => handleChange('role', e.target.value)}>
+                  {ROLESLIST.map((role) => <option key={role} value={role}>{role}</option>)}
+                </select>
+              </div>
+              <div className="form-field" style={{ marginTop: '16px' }}>
+                <label className="form-label">Status</label>
+                <select className="form-select" value={formData.status} onChange={(e) => handleChange('status', e.target.value)}>
+                  <option value="active">Active</option>
+                  <option value="locked">Locked</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn btn-primary">Save User</button>
+                <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    function GroupModal({ group, onSave, onClose }) {
+      const [name, setName] = useState(group.name || '');
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        onSave({ ...group, name: trimmed });
+      };
+
+      return (
+        <div className="modal-overlay" onClick={onClose}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">{group.id ? 'Rename Group' : 'Add Group'}</h3>
+              <button className="close-button" onClick={onClose}>×</button>
+            </div>
+            <form onSubmit={handleSubmit}>
+              <div className="form-field">
+                <label className="form-label">Group Name</label>
+                <input type="text" className="form-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter group name" required />
+              </div>
+              <div style={{ display: 'flex', gap: '12px', marginTop: '20px', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn btn-primary">Save Group</button>
+                <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<App />, document.getElementById('root'));
+  </script>
+</body>
+</html>

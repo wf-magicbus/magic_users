@@ -1,4 +1,5 @@
 import React from 'react';
+import './globals.css';
 import { semanticColors } from '@/components/ui2/theme';
 
 export default function Dashboard2Layout({ children }: { children: React.ReactNode }) {
