@@ -22,7 +22,10 @@ export default function RolePicker({ active, onChange }: RolePickerProps) {
     fetch("/api/policy-roles")
       .then(r => r.json())
       .then(d => {
-        if (Array.isArray(d) && d.length > 0) setRoles(d);
+        if (Array.isArray(d) && d.length > 0) {
+          setRoles(d);
+          if (!active) onChange(d[0]);
+        }
       })
       .catch(() => {});
   }, []);

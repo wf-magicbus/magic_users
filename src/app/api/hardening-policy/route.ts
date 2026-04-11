@@ -1,22 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin as supabase } from "@/lib/supabase-admin";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { data, error } = await supabase
-      .from("hardening_policy")
-      .select("*")
-      .limit(1)
-      .single();
+    const role = request.nextUrl.searchParams.get("role");
+    let query = supabase.from("hardening_policy").select("*");
+    if (role) query = query.eq("role", role);
+    else query = query.limit(1);
 
-    if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json({ error: "Failed to fetch hardening policy" }, { status: 500 });
-    }
-
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error fetching hardening policy:", error);
+    const { data, error } = await query.maybeSingle();
+    if (error) return NextResponse.json({ error: "Failed to fetch hardening policy" }, { status: 500 });
+    return NextResponse.json(data ?? null);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -24,28 +19,22 @@ export async function GET(_request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, created_at, ...updateFields } = body;
+    const { id, created_at, updated_at, ...updateFields } = body;
+    const role = updateFields.role ?? request.nextUrl.searchParams.get("role");
 
-    const updateData = {
-      ...updateFields,
-      updated_at: new Date().toISOString(),
-    };
+    if (!role) return NextResponse.json({ error: "role is required" }, { status: 400 });
 
-    const { data, error } = await supabase
-      .from("hardening_policy")
-      .update(updateData)
-      .not("id", "is", null)
-      .select("*")
-      .single();
-
-    if (error) {
-      console.error("Supabase error:", error);
-      return NextResponse.json({ error: "Failed to update hardening policy" }, { status: 500 });
+    const { data: existing } = await supabase.from("hardening_policy").select("id").eq("role", role).maybeSingle();
+    let result, error;
+    if (existing?.id) {
+      ({ data: result, error } = await supabase.from("hardening_policy").update({ ...updateFields, role, updated_at: new Date().toISOString() }).eq("id", existing.id).select("*").maybeSingle());
+    } else {
+      ({ data: result, error } = await supabase.from("hardening_policy").insert({ ...updateFields, role, updated_at: new Date().toISOString() }).select("*").maybeSingle());
     }
 
-    return NextResponse.json(data);
-  } catch (error) {
-    console.error("Error updating hardening policy:", error);
+    if (error) return NextResponse.json({ error: "Failed to update hardening policy" }, { status: 500 });
+    return NextResponse.json(result);
+  } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

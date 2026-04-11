@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import PolicyCard from "../PolicyCard";
 import PolicyToggle from "../PolicyToggle";
 import PolicyField from "../PolicyField";
+import RolePicker from "../RolePicker";
 
 interface HardeningPolicy {
   id: string;
@@ -55,26 +56,26 @@ const encryptionOptions = [
 ];
 
 export default function HardeningTab() {
+  const [role, setRole] = useState("");
   const [policy, setPolicy] = useState<HardeningPolicy | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<HardeningPolicy>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchPolicy = () => {
-    fetch("/api/hardening-policy")
+  const fetchPolicy = (r: string) => {
+    if (!r) return;
+    setLoading(true);
+    setEditing(false);
+    fetch(`/api/hardening-policy?role=${encodeURIComponent(r)}`)
       .then((res) => res.json())
-      .then((data) => setPolicy(data.error ? null : data))
+      .then((data) => setPolicy(data && !data.error ? data : null))
       .catch(() => setPolicy(null))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchPolicy(); }, []);
-
-  const startEdit = () => {
-    setEditing(true);
-    setForm({ ...policy });
-  };
+  const handleRoleChange = (r: string) => { setRole(r); fetchPolicy(r); };
+  const startEdit = () => { setEditing(true); setForm({ ...policy }); };
 
   const saveEdit = async () => {
     setSaving(true);
@@ -82,26 +83,27 @@ export default function HardeningTab() {
       const res = await fetch("/api/hardening-policy", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, role }),
       });
-      if (res.ok) {
-        fetchPolicy();
-        setEditing(false);
-      }
-    } finally {
-      setSaving(false);
-    }
+      if (res.ok) { fetchPolicy(role); setEditing(false); }
+    } finally { setSaving(false); }
   };
-
-  if (loading) return <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>Loading hardening policy...</div>;
-  if (!policy) return <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>Hardening policy not configured.</div>;
 
   const data = editing ? form : policy;
 
   return (
     <div className="max-w-3xl">
+      <RolePicker active={role} onChange={handleRoleChange} />
+
+      {!role ? null : loading ? (
+        <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>Loading…</div>
+      ) : !policy ? (
+        <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>
+          No hardening policy configured for <strong>{role}</strong>. Assign it from the Roles page first.
+        </div>
+      ) : (
       <PolicyCard
-        title="System Hardening"
+        title={`System Hardening — ${role.replace(/_/g, " ")}`}
         editing={editing}
         saving={saving}
         onEdit={startEdit}
@@ -263,6 +265,7 @@ export default function HardeningTab() {
           />
         </div>
       </PolicyCard>
+      )}
     </div>
   );
 }

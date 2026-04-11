@@ -99,7 +99,7 @@ export default function TerminalPage() {
 
     ws.onerror = () => {
       setStatus("error");
-      setErrorMsg("WebSocket error — is the custom server running? (node server.mjs)");
+      setErrorMsg("WebSocket error — is the agent running on the VM?");
       term.writeln("\r\n\x1b[31mConnection error.\x1b[0m");
     };
 
@@ -111,7 +111,7 @@ export default function TerminalPage() {
     // terminal → SSH
     term.onData((data) => {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "input", data }));
+        ws.send(data);
       }
     });
 
@@ -277,7 +277,7 @@ export default function TerminalPage() {
 
       {/* Help note */}
       <p className="text-xs mt-3" style={{ color: "var(--text-3)" }}>
-        Terminal requires the custom server: <code className="font-mono" style={{ color: "var(--text-2)" }}>node server.mjs</code> instead of <code className="font-mono" style={{ color: "var(--text-2)" }}>npm run dev</code>
+        Terminal connects to the agent on the VM. Ensure the agent is running and port 80 is accessible.
       </p>
     </div>
   );

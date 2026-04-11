@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import PolicyCard from "../PolicyCard";
 import PolicyToggle from "../PolicyToggle";
 import PolicyField from "../PolicyField";
+import RolePicker from "../RolePicker";
 
 interface EndpointProtection {
   id: string;
+  role: string;
   defender_enabled: boolean;
   realtime_protection_enabled: boolean;
   cloud_protection_enabled: boolean;
@@ -35,26 +37,30 @@ const scanDayOptions = [
 ];
 
 export default function EndpointProtectionTab() {
+  const [role, setRole] = useState("");
   const [policy, setPolicy] = useState<EndpointProtection | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<Partial<EndpointProtection>>({});
   const [saving, setSaving] = useState(false);
 
-  const fetchPolicy = () => {
-    fetch("/api/endpoint-protection")
+  const fetchPolicy = (r: string) => {
+    if (!r) return;
+    setLoading(true);
+    setEditing(false);
+    fetch(`/api/endpoint-protection?role=${encodeURIComponent(r)}`)
       .then((res) => res.json())
-      .then((data) => setPolicy(data.error ? null : data))
+      .then((data) => setPolicy(data && !data.error ? data : null))
       .catch(() => setPolicy(null))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchPolicy(); }, []);
-
-  const startEdit = () => {
-    setEditing(true);
-    setForm({ ...policy });
+  const handleRoleChange = (r: string) => {
+    setRole(r);
+    fetchPolicy(r);
   };
+
+  const startEdit = () => { setEditing(true); setForm({ ...policy }); };
 
   const saveEdit = async () => {
     setSaving(true);
@@ -62,88 +68,48 @@ export default function EndpointProtectionTab() {
       const res = await fetch("/api/endpoint-protection", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, role }),
       });
-      if (res.ok) {
-        fetchPolicy();
-        setEditing(false);
-      }
-    } finally {
-      setSaving(false);
-    }
+      if (res.ok) { fetchPolicy(role); setEditing(false); }
+    } finally { setSaving(false); }
   };
-
-  if (loading) return <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>Loading endpoint protection...</div>;
-  if (!policy) return <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>Endpoint protection not configured.</div>;
 
   const data = editing ? form : policy;
 
   return (
     <div className="max-w-2xl">
-      <PolicyCard
-        title="Endpoint Protection"
-        editing={editing}
-        saving={saving}
-        onEdit={startEdit}
-        onSave={saveEdit}
-        onCancel={() => setEditing(false)}
-      >
-        {/* Microsoft Defender */}
-        <div className="pb-3 mb-3" style={{ borderBottom: "1px solid var(--border)" }}>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-1)" }}>Microsoft Defender</h3>
-          <PolicyToggle
-            label="Microsoft Defender"
-            value={data.defender_enabled ?? false}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, defender_enabled: v })}
-          />
-          <PolicyToggle
-            label="Real-time Protection"
-            value={data.realtime_protection_enabled ?? false}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, realtime_protection_enabled: v })}
-          />
-          <PolicyToggle
-            label="Cloud Protection"
-            value={data.cloud_protection_enabled ?? false}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, cloud_protection_enabled: v })}
-          />
-          <PolicyToggle
-            label="Automatic Sample Submission"
-            value={data.automatic_sample_submission ?? false}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, automatic_sample_submission: v })}
-          />
-          <PolicyToggle
-            label="Scan Removable Drives"
-            value={data.scan_removable_drives ?? false}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, scan_removable_drives: v })}
-          />
-        </div>
+      <RolePicker active={role} onChange={handleRoleChange} />
 
-        {/* Scan Schedule */}
-        <div>
-          <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-1)" }}>Scan Schedule</h3>
-          <PolicyField
-            label="Scan Type"
-            value={data.scheduled_scan_type ?? "disabled"}
-            type="select"
-            options={scanTypeOptions}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, scheduled_scan_type: String(v) })}
-          />
-          <PolicyField
-            label="Scan Day"
-            value={String(data.scheduled_scan_day ?? 0)}
-            type="select"
-            options={scanDayOptions}
-            readOnly={!editing}
-            onChange={(v) => setForm({ ...form, scheduled_scan_day: Number(v) })}
-          />
+      {!role ? null : loading ? (
+        <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>Loading…</div>
+      ) : !policy ? (
+        <div className="py-4 text-sm" style={{ color: "var(--text-3)" }}>
+          No endpoint protection configured for <strong>{role}</strong>. Assign it from the Roles page first.
         </div>
-      </PolicyCard>
+      ) : (
+        <PolicyCard
+          title={`Endpoint Protection — ${role.replace(/_/g, " ")}`}
+          editing={editing}
+          saving={saving}
+          onEdit={startEdit}
+          onSave={saveEdit}
+          onCancel={() => setEditing(false)}
+        >
+          <div className="pb-3 mb-3" style={{ borderBottom: "1px solid var(--border)" }}>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-1)" }}>Microsoft Defender</h3>
+            <PolicyToggle label="Microsoft Defender" value={data?.defender_enabled ?? false} readOnly={!editing} onChange={(v) => setForm({ ...form, defender_enabled: v })} />
+            <PolicyToggle label="Real-time Protection" value={data?.realtime_protection_enabled ?? false} readOnly={!editing} onChange={(v) => setForm({ ...form, realtime_protection_enabled: v })} />
+            <PolicyToggle label="Cloud Protection" value={data?.cloud_protection_enabled ?? false} readOnly={!editing} onChange={(v) => setForm({ ...form, cloud_protection_enabled: v })} />
+            <PolicyToggle label="Automatic Sample Submission" value={data?.automatic_sample_submission ?? false} readOnly={!editing} onChange={(v) => setForm({ ...form, automatic_sample_submission: v })} />
+            <PolicyToggle label="Scan Removable Drives" value={data?.scan_removable_drives ?? false} readOnly={!editing} onChange={(v) => setForm({ ...form, scan_removable_drives: v })} />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold mb-2" style={{ color: "var(--text-1)" }}>Scan Schedule</h3>
+            <PolicyField label="Scan Type" value={data?.scheduled_scan_type ?? "disabled"} type="select" options={scanTypeOptions} readOnly={!editing} onChange={(v) => setForm({ ...form, scheduled_scan_type: String(v) })} />
+            <PolicyField label="Scan Day" value={String(data?.scheduled_scan_day ?? 0)} type="select" options={scanDayOptions} readOnly={!editing} onChange={(v) => setForm({ ...form, scheduled_scan_day: Number(v) })} />
+          </div>
+        </PolicyCard>
+      )}
     </div>
   );
 }
