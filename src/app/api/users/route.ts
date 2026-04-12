@@ -184,6 +184,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Provision user in Samba AD DC via agent
+    const agentUrl = process.env.AGENT_API_URL;
+    const agentKey = process.env.AGENT_API_KEY;
+    if (agentUrl && agentKey) {
+      try {
+        // username = first part of email (before @)
+        const username = trimmedEmail.split("@")[0];
+        await fetch(`${agentUrl}/user/provision`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-API-Key": agentKey },
+          body: JSON.stringify({ username, password: String(password), role: role || null }),
+        });
+      } catch (agentErr) {
+        // Log but don't fail — user is created in Supabase, AD sync can retry
+        console.error("Agent provision failed (non-fatal):", agentErr);
+      }
+    }
+
     return NextResponse.json(
       {
         id: authUserId,
