@@ -30,9 +30,17 @@ export async function GET() {
       }
     }
 
+    // Fetch which roles are marked as admin accounts
+    const { data: adminRolesData } = await supabase
+      .from("admin_roles")
+      .select("role_name")
+      .eq("is_dedicated_admin", true);
+    const adminRoleNames = new Set((adminRolesData ?? []).map((r: { role_name: string }) => r.role_name));
+
     const roles = Array.from(roleSet).sort().map((role) => ({
       name: role,
       policies: assignments[role] ?? {},
+      is_admin_role: adminRoleNames.has(role),
     }));
 
     return NextResponse.json({ roles, policyTables: POLICY_TABLES });
@@ -44,7 +52,7 @@ export async function GET() {
 // POST /api/roles — create a new role by seeding a default row in all policy tables
 export async function POST(req: Request) {
   try {
-    const { name } = await req.json();
+    const { name, is_admin_role } = await req.json();
     if (!name || typeof name !== "string") {
       return NextResponse.json({ error: "Role name required" }, { status: 400 });
     }
@@ -57,13 +65,21 @@ export async function POST(req: Request) {
     );
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+    // If marked as admin role, also register in admin_roles
+    if (is_admin_role) {
+      await supabase.from("admin_roles").upsert(
+        { role_name: role, description: null, is_dedicated_admin: true, max_members: 0 },
+        { onConflict: "role_name" }
+      );
+    }
+
     return NextResponse.json({ role });
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
-// DELETE /api/roles — remove a role from all policy tables
+// DELETE /api/roles — remove a role from all policy tables and admin_roles
 export async function DELETE(req: Request) {
   try {
     const { name } = await req.json();
@@ -72,6 +88,9 @@ export async function DELETE(req: Request) {
     for (const table of POLICY_TABLES) {
       await supabase.from(table).delete().eq("role", name);
     }
+
+    // Also remove from admin_roles if it was registered there
+    await supabase.from("admin_roles").delete().eq("role_name", name);
 
     return NextResponse.json({ deleted: name });
   } catch {

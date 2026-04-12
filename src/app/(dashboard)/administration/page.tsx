@@ -81,7 +81,10 @@ export default function AdministrationPage() {
   const fetchAdminRoles = useCallback(async () => {
     try {
       setError(null);
-      const { data, error: err } = await supabase.from("admin_roles").select("*");
+      const { data, error: err } = await supabase
+        .from("admin_roles")
+        .select("*")
+        .eq("is_dedicated_admin", true);
       if (err) throw err;
       setAdminRoles(data || []);
     } catch (err: any) {
@@ -547,11 +550,17 @@ function EditModal({ data, availableUsers, adminRoles, onClose, onRefresh }: any
           if (error) throw error;
         }
       } else if (data.type === "role") {
+        const rolePayload = {
+          role_name: formData.role_name,
+          description: formData.description || null,
+          is_dedicated_admin: true,
+          max_members: formData.max_members ?? 0,
+        };
         if (data.id) {
-          const { error } = await supabase.from("admin_roles").update(formData).eq("id", data.id);
+          const { error } = await supabase.from("admin_roles").update(rolePayload).eq("id", data.id);
           if (error) throw error;
         } else {
-          const { error } = await supabase.from("admin_roles").insert([formData]);
+          const { error } = await supabase.from("admin_roles").insert([rolePayload]);
           if (error) throw error;
         }
       } else if (data.type === "protectedGroup") {
@@ -630,7 +639,7 @@ function EditModal({ data, availableUsers, adminRoles, onClose, onRefresh }: any
                   required
                 >
                   <option value="">— Select admin type —</option>
-                  {(adminRoles || []).filter((role: AdminRole) => role.role_name !== "student").map((role: AdminRole) => (
+                  {(adminRoles || []).filter((role: AdminRole) => role.is_dedicated_admin).map((role: AdminRole) => (
                     <option key={role.id} value={role.id}>
                       {role.role_name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                       {role.description ? ` — ${role.description}` : ""}

@@ -29,7 +29,7 @@ const POLICY_ICONS: Record<string, string> = {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type Role = { name: string; policies: Record<string, boolean> };
+type Role = { name: string; policies: Record<string, boolean>; is_admin_role?: boolean };
 type PanelState = { role: string; policy: string; isNew: boolean; values: Record<string, unknown> } | null;
 
 // ─── Form field helpers ───────────────────────────────────────────────────────
@@ -316,6 +316,7 @@ export default function RolesPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [newRole, setNewRole] = useState("");
+  const [newRoleIsAdmin, setNewRoleIsAdmin] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [panel, setPanel] = useState<PanelState>(null);
@@ -397,13 +398,14 @@ export default function RolesPage() {
     const res = await fetch("/api/roles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newRole }),
+      body: JSON.stringify({ name: newRole, is_admin_role: newRoleIsAdmin }),
     });
     if (!res.ok) {
       const d = await res.json();
       setError(d.error ?? "Failed to create role");
     } else {
       setNewRole("");
+      setNewRoleIsAdmin(false);
       await fetchRoles();
     }
     setCreating(false);
@@ -451,7 +453,7 @@ export default function RolesPage() {
               className="form-input flex-1 min-w-48 px-3 py-2 rounded text-sm"
               style={{ border: "1px solid rgba(180, 145, 32, 0.22)", color: "#2f2a1f", background: "#fafaf8" }}
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap items-center">
               <input
                 value={newRole}
                 onChange={(e) => setNewRole(e.target.value)}
@@ -460,10 +462,26 @@ export default function RolesPage() {
                 className="px-3 py-2 rounded text-sm outline-none"
                 style={{ background: "#fafaf8", border: "1px solid rgba(180, 145, 32, 0.22)", color: "#2f2a1f", width: 160 }}
               />
+              <label
+                className="flex items-center gap-1.5 px-3 py-2 rounded cursor-pointer select-none text-sm"
+                style={{
+                  background: newRoleIsAdmin ? "rgba(244, 196, 48, 0.15)" : "#fafaf8",
+                  border: `1px solid ${newRoleIsAdmin ? "rgba(180, 145, 32, 0.5)" : "rgba(180, 145, 32, 0.22)"}`,
+                  color: "#2f2a1f",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={newRoleIsAdmin}
+                  onChange={(e) => setNewRoleIsAdmin(e.target.checked)}
+                  className="accent-yellow-400 w-3.5 h-3.5"
+                />
+                <span className="font-medium">Admin Account</span>
+              </label>
               <button
                 onClick={createRole}
                 disabled={creating || !newRole.trim()}
-                className="px-4 py-2 rounded text-sm font-semibold text-white"
+                className="px-4 py-2 rounded text-sm font-semibold"
                 style={{ background: "#f4c430", opacity: creating || !newRole.trim() ? 0.5 : 1, color: "#2f2a1f" }}
               >
                 {creating ? "Creating…" : "+ Add Role"}
@@ -529,6 +547,14 @@ export default function RolesPage() {
                             <span className="text-xs font-semibold capitalize text-center" style={{ color: "#2f2a1f" }}>
                               {role.name.replace(/_/g, " ")}
                             </span>
+                            {role.is_admin_role && (
+                              <span
+                                className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
+                                style={{ background: "rgba(244, 196, 48, 0.25)", color: "#92700a", border: "1px solid rgba(180, 145, 32, 0.4)" }}
+                              >
+                                Admin
+                              </span>
+                            )}
                             <button
                               onClick={() => deleteRole(role.name)}
                               className="text-[10px] px-2 py-0.5 rounded"
