@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
       name,
       status,
       role,
-      mfa_enabled,
       last_login,
       created_at
     `, { count: "exact" });
@@ -68,7 +67,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { user_id, name, status, role, mfa_enabled } = body;
+    const { user_id, name, status, role } = body;
 
     // Validate required fields
     if (!name) {
@@ -111,7 +110,6 @@ export async function POST(request: NextRequest) {
         name,
         status: status || "active",
         role: role || null,
-        mfa_enabled: mfa_enabled || false,
         last_login: null,
       })
       .select(`
@@ -119,7 +117,6 @@ export async function POST(request: NextRequest) {
         name,
         status,
         role,
-        mfa_enabled,
         last_login,
         created_at
       `)

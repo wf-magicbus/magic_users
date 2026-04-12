@@ -65,12 +65,12 @@ export const mockProtectedGroups = [
 ];
 
 export const mockUsers = [
-  { id: "u-001", name: "Alice Chen", email: "alice@company.com", status: "active", role: "super_admin", last_login: "2026-02-28T14:32:00Z", mfa_enabled: true },
-  { id: "u-002", name: "Bob Johnson", email: "bob@company.com", status: "active", role: "user_admin", last_login: "2026-02-27T09:15:00Z", mfa_enabled: true },
-  { id: "u-003", name: "Carol Williams", email: "carol@company.com", status: "locked", role: null, last_login: "2026-02-25T11:45:00Z", mfa_enabled: false },
-  { id: "u-004", name: "David Lee", email: "david@company.com", status: "active", role: null, last_login: "2026-02-28T08:00:00Z", mfa_enabled: true },
-  { id: "u-005", name: "Eve Martinez", email: "eve@company.com", status: "disabled", role: null, last_login: "2026-01-15T16:20:00Z", mfa_enabled: false },
-  { id: "u-006", name: "Frank Brown", email: "frank@company.com", status: "active", role: "auditor", last_login: "2026-02-28T12:10:00Z", mfa_enabled: true },
+  { id: "u-001", name: "Alice Chen", email: "alice@company.com", status: "active", role: "super_admin", last_login: "2026-02-28T14:32:00Z" },
+  { id: "u-002", name: "Bob Johnson", email: "bob@company.com", status: "active", role: "user_admin", last_login: "2026-02-27T09:15:00Z" },
+  { id: "u-003", name: "Carol Williams", email: "carol@company.com", status: "locked", role: null, last_login: "2026-02-25T11:45:00Z" },
+  { id: "u-004", name: "David Lee", email: "david@company.com", status: "active", role: null, last_login: "2026-02-28T08:00:00Z" },
+  { id: "u-005", name: "Eve Martinez", email: "eve@company.com", status: "disabled", role: null, last_login: "2026-01-15T16:20:00Z" },
+  { id: "u-006", name: "Frank Brown", email: "frank@company.com", status: "active", role: "auditor", last_login: "2026-02-28T12:10:00Z" },
 ];
 
 export const mockUserDetail = {
@@ -80,7 +80,6 @@ export const mockUserDetail = {
   status: "active",
   role: "super_admin",
   last_login: "2026-02-28T14:32:00Z",
-  mfa_enabled: true,
   password_last_changed: "2026-02-01",
   password_expires_at: "2026-05-02",
   must_change_password: false,

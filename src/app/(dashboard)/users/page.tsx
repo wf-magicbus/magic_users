@@ -106,14 +106,14 @@ export default function UsersPage() {
         <table className="w-full">
           <thead>
             <tr style={{ borderBottom: "1px solid var(--border)" }}>
-              {["User", "Status", "Role", "Last Login", "MFA"].map(h => (
+              {["User", "Status", "Role", "Last Login"].map(h => (
                 <th key={h} className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="px-6 py-8 text-center text-sm" style={{ color: "var(--text-3)" }}>Loading…</td></tr>
+              <tr><td colSpan={4}className="px-6 py-8 text-center text-sm" style={{ color: "var(--text-3)" }}>Loading…</td></tr>
             ) : users.map((user, i) => {
               const s = statusMap[user.status] || statusMap.disabled;
               return (
@@ -155,11 +155,6 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>
                     {user.last_login ? new Date(user.last_login).toLocaleDateString() : "—"}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="text-xs font-semibold" style={{ color: user.mfa_enabled ? "#15803D" : "var(--text-3)" }}>
-                      {user.mfa_enabled ? "Enabled" : "Off"}
-                    </span>
                   </td>
                 </tr>
               );

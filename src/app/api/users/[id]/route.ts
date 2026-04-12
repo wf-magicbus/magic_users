@@ -16,7 +16,6 @@ export async function GET(
         name,
         status,
         role,
-        mfa_enabled,
         last_login,
         created_at
       `)
@@ -44,7 +43,6 @@ export async function GET(
       name: data.name,
       status: data.status,
       role: data.role,
-      mfa_enabled: data.mfa_enabled,
       last_login: data.last_login,
     });
   } catch (error) {
@@ -70,9 +68,7 @@ export async function PATCH(
 
     if (body.name !== undefined) updateData.name = body.name;
     if (body.role !== undefined) updateData.role = body.role;
-    if (body.mfa_enabled !== undefined) updateData.mfa_enabled = body.mfa_enabled;
-
-    if (Object.keys(updateData).length === 0) {
+if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
         { error: "No fields to update" },
         { status: 400 }
@@ -88,7 +84,6 @@ export async function PATCH(
         name,
         status,
         role,
-        mfa_enabled,
         last_login,
         created_at
       `)
