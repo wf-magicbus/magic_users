@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 // GET /api/admins/[id]
 export async function GET(
   _request: NextRequest,
@@ -7,6 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    const supabase = await createClient();
 
     const { data, error } = await supabase
       .from("admin_accounts")
@@ -44,13 +45,17 @@ export async function GET(
       );
     }
 
+    const adminRole = Array.isArray(data.admin_roles)
+      ? data.admin_roles[0]
+      : data.admin_roles;
+
     // Transform response to match design document
     const formattedData = {
       id: data.id,
       user_id: data.user_id,
       name: data.name,
       email: data.email,
-      role: data.admin_roles?.role_name || null,
+      role: adminRole?.role_name || null,
       created_at: data.created_at,
       created_by: data.created_by,
     };
@@ -85,7 +90,7 @@ export async function PATCH(
         { status: 400 }
       );
     }
-
+    const supabase = await createClient();
     // Check if new email already exists (if email is being updated)
     if (body.email) {
       const { data: existingAdmin } = await supabase
@@ -140,13 +145,17 @@ export async function PATCH(
       );
     }
 
+    const updatedAdminRole = Array.isArray(data.admin_roles)
+      ? data.admin_roles[0]
+      : data.admin_roles;
+
     // Transform response to match design document
     const formattedData = {
       id: data.id,
       user_id: data.user_id,
       name: data.name,
       email: data.email,
-      role: data.admin_roles?.role_name || null,
+      role: updatedAdminRole?.role_name || null,
       created_at: data.created_at,
       created_by: data.created_by,
     };
@@ -167,7 +176,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-
+    const supabase = await createClient();
     // Delete admin account
     const { error } = await supabase
       .from("admin_accounts")

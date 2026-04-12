@@ -4,10 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 // PUT /api/password-policy/[id]
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const id = params.id;
+        const { id } = await params;
         const body = await request.json();
         console.log(`Updating password policy with ID: ${id}`, body);
 

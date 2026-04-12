@@ -30,15 +30,21 @@ export async function GET(_request: NextRequest) {
     }
 
     // Transform response to match design document
-    const formattedData = (data ?? []).map((admin: any) => ({
-      id: admin.id,
-      user_id: admin.user_id,
-      name: admin.name,
-      email: admin.email,
-      role: admin.admin_roles?.role_name || null,
-      created_at: admin.created_at,
-      created_by: admin.created_by,
-    }));
+    const formattedData = (data ?? []).map((admin: any) => {
+      const adminRole = Array.isArray(admin.admin_roles)
+        ? admin.admin_roles[0]
+        : admin.admin_roles;
+
+      return {
+        id: admin.id,
+        user_id: admin.user_id,
+        name: admin.name,
+        email: admin.email,
+        role: adminRole?.role_name || null,
+        created_at: admin.created_at,
+        created_by: admin.created_by,
+      };
+    });
 
     return NextResponse.json({
       count: formattedData.length,
@@ -115,12 +121,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Transform response to match design document
+    const createdAdminRole = Array.isArray(data.admin_roles)
+      ? data.admin_roles[0]
+      : data.admin_roles;
+
     const formattedData = {
       id: data.id,
       user_id: data.user_id,
       name: data.name,
       email: data.email,
-      role: data.admin_roles?.role_name || null,
+      role: createdAdminRole?.role_name || null,
       created_at: data.created_at,
       created_by: data.created_by,
     };

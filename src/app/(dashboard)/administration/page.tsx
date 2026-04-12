@@ -29,6 +29,25 @@ interface ProtectedGroup {
   group_name: string;
   description: string;
   member_count: number;
+  members?: ProtectedGroupMember[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface ProtectedGroupMember {
+  user_id: string;
+  name: string;
+  email: string;
+  status: "active" | "locked" | "disabled";
+  role: string | null;
+}
+
+interface DirectoryUser {
+  id: string;
+  name: string;
+  email: string;
+  status: "active" | "locked" | "disabled";
+  role: string | null;
 }
 
 export default function AdministrationPage() {
@@ -42,6 +61,8 @@ export default function AdministrationPage() {
   const [error, setError] = useState<string | null>(null);
   const [adminSearch, setAdminSearch] = useState("");
   const [roleSearch, setRoleSearch] = useState("");
+  const [groupSearch, setGroupSearch] = useState("");
+  const [availableUsers, setAvailableUsers] = useState<DirectoryUser[]>([]);
 
   const supabase = createClient();
 
@@ -72,25 +93,39 @@ export default function AdministrationPage() {
   const fetchProtectedGroups = useCallback(async () => {
     try {
       setError(null);
-      const { data, error: err } = await supabase.from("protected_groups").select("*");
-      if (err) throw err;
-      setProtectedGroups(data || []);
+      const response = await fetch("/api/protected-groups");
+      if (!response.ok) throw new Error("Failed to fetch protected groups");
+      const data = await response.json();
+      setProtectedGroups(Array.isArray(data) ? data : []);
     } catch (err: any) {
       setError(err.message);
       setProtectedGroups([]);
     }
-  }, [supabase]);
+  }, []);
+
+  const fetchAvailableUsers = useCallback(async () => {
+    try {
+      const response = await fetch("/api/users?limit=200");
+      if (!response.ok) throw new Error("Failed to fetch users");
+      const data = await response.json();
+      setAvailableUsers(Array.isArray(data?.users) ? data.users : []);
+    } catch {
+      setAvailableUsers([]);
+    }
+  }, []);
 
   useEffect(() => {
     const loadAllData = async () => {
       setLoadingData(true);
-      await Promise.all([fetchAdmins(), fetchAdminRoles(), fetchProtectedGroups()]);
+      await Promise.all([fetchAdmins(), fetchAdminRoles(), fetchProtectedGroups(), fetchAvailableUsers()]);
       setLoadingData(false);
     };
     loadAllData();
-  }, [fetchAdmins, fetchAdminRoles, fetchProtectedGroups]);
+  }, [fetchAdmins, fetchAdminRoles, fetchProtectedGroups, fetchAvailableUsers]);
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
+  if (loading || loadingData) {
+    return <div className="text-gray-500 text-center py-8">Loading...</div>;
+  }
 
   const filteredAdmins = admins.filter(a =>
     a.name.toLowerCase().includes(adminSearch.toLowerCase()) ||
@@ -101,55 +136,38 @@ export default function AdministrationPage() {
     r.role_name.toLowerCase().includes(roleSearch.toLowerCase())
   );
 
+  const filteredGroups = protectedGroups.filter((group) =>
+    group.group_name.toLowerCase().includes(groupSearch.toLowerCase()) ||
+    (group.description || "").toLowerCase().includes(groupSearch.toLowerCase())
+  );
+
   return (
-    <div className="min-h-screen" style={{ background: "linear-gradient(180deg, #fffefb 0%, #fff8e8 100%)" }}>
-      <style>{`
-        .golden-header { background: linear-gradient(135deg, #f4c430, #d4a017); }
-        .stat-card { background: #fffaf0; border: 1px solid rgba(244, 196, 48, 0.18); }
-        .tab-button { transition: all 0.2s ease; }
-        .tab-button:hover { background: rgba(244, 196, 48, 0.12); }
-        .tab-button.active { background: #f4c430; color: #ffffff; }
-        .form-input { border: 1px solid rgba(180, 145, 32, 0.22); transition: all 0.2s ease; background: white; }
-        .form-input:focus { outline: none; border-color: #f4c430; box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.22); }
-        .btn-primary { background: #f4c430; color: #ffffff; transition: all 0.2s ease; }
-        .btn-primary:hover:not(:disabled) { background: #e0b020; transform: translateY(-1px); }
-        .btn-danger { background: #d64545; color: white; }
-        .btn-danger:hover:not(:disabled) { opacity: 0.92; }
-        .btn-secondary { background: #fff6d4; color: #2f2a1f; border: 1px solid rgba(212, 160, 23, 0.2); }
-        .btn-secondary:hover:not(:disabled) { background: #ffefb5; }
-        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-        .status-active { background: rgba(46, 158, 91, 0.10); color: #2e9e5b; border: 1px solid rgba(46, 158, 91, 0.18); }
-        .data-table thead { background: #fff7da; }
-        .data-table td { border-bottom: 1px solid rgba(180, 145, 32, 0.10); }
-        .data-table tbody tr:hover { background: #fffdf1; }
-        .modal-overlay { position: fixed; inset: 0; background: rgba(71, 56, 8, 0.28); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 12px; padding: 28px; max-width: 600px; width: 90%; max-height: 85vh; overflow-y: auto; box-shadow: 0 16px 32px rgba(90, 70, 0, 0.12); border: 1px solid rgba(180, 145, 32, 0.16); }
-      `}</style>
-
-      {/* Header */}
-      <div className="bg-white border-b" style={{ borderColor: "rgba(180, 145, 32, 0.22)" }}>
-        <div className="max-w-7xl mx-auto px-8 py-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#fffefb] to-[#fff8e8]">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <div className="golden-header w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold">A</div>
-            <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f" }}>Administration</h1>
+            <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-yellow-400 text-white font-bold shadow-sm">A</div>
+            <h1 className="text-3xl font-bold text-gray-900">Administration</h1>
           </div>
-          <p style={{ fontSize: "13px", color: "#6f6653" }}>Manage admin accounts, roles, and protected groups</p>
+          <p className="text-gray-600">Manage admin accounts, roles, and protected groups</p>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="max-w-7xl mx-auto px-8 py-6">
-        <div className="bg-white rounded-lg p-2 shadow-sm mb-8" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+            {error}
+          </div>
+        )}
+
+        <div className="flex gap-1 p-1 rounded-lg w-fit mb-8 bg-white border border-gray-200 shadow-sm flex-wrap">
           <div className="flex gap-1 flex-wrap">
             {tabs.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className="tab-button px-5 py-2 rounded text-sm font-600"
-                style={{
-                  color: activeTab === tab ? "#ffffff" : "#6f6653",
-                  background: activeTab === tab ? "#f4c430" : "transparent"
-                }}
+                className={`px-4 py-2 text-sm font-semibold rounded-lg transition-colors ${activeTab === tab
+                  ? "bg-yellow-400 text-white"
+                  : "text-gray-700 hover:bg-yellow-50"
+                  }`}
               >
                 {tab}
               </button>
@@ -178,12 +196,26 @@ export default function AdministrationPage() {
           />
         )}
         {activeTab === "📁 Protected Groups" && (
-          <ProtectedGroupsTab groups={protectedGroups} />
+          <ProtectedGroupsTab
+            groups={filteredGroups}
+            allGroups={protectedGroups}
+            search={groupSearch}
+            setSearch={setGroupSearch}
+            onEdit={setEditData}
+            onRefresh={fetchProtectedGroups}
+          />
         )}
       </div>
 
       {/* Edit Modal */}
-      {editData && <EditModal data={editData} onClose={() => setEditData(null)} onRefresh={editData.type === "admin" ? fetchAdmins : fetchAdminRoles} />}
+      {editData && (
+        <EditModal
+          data={editData}
+          availableUsers={availableUsers}
+          onClose={() => setEditData(null)}
+          onRefresh={editData.type === "admin" ? fetchAdmins : editData.type === "role" ? fetchAdminRoles : fetchProtectedGroups}
+        />
+      )}
     </div>
   );
 }
@@ -205,75 +237,74 @@ function AdminAccountsTab({ admins, allAdmins, search, setSearch, onEdit, onRefr
   const adminCount = allAdmins.length;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-7" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
-      <div className="mb-6 pb-4" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#2f2a1f", marginBottom: "6px" }}>Admin Accounts</h2>
-        <p style={{ fontSize: "14px", color: "#6f6653" }}>Manage administrative user accounts and their privileges</p>
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Admin Accounts</h2>
+        <p className="text-sm text-gray-600">Manage administrative user accounts and their privileges</p>
       </div>
 
-      {/* Search and Add */}
-      <div className="flex gap-3 mb-6 flex-wrap">
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
           placeholder="Search by name or email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="form-input flex-1 min-w-48 px-3 py-2 rounded text-sm"
-          style={{ paddingLeft: "40px", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8860b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "12px center" }}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
         />
-        <button className="btn-primary px-4 py-2 rounded text-sm font-600" onClick={() => onEdit({ type: "admin", id: null })}>
+        <button className="px-6 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm" onClick={() => onEdit({ type: "admin", id: null })}>
           Add Admin
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="stat-card rounded p-3">
-          <div style={{ fontSize: "12px", color: "#6f6653", fontWeight: "600" }}>Total Admins</div>
-          <div style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f", marginTop: "4px" }}>{adminCount}</div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm font-semibold text-gray-700">Total Admins</div>
+          <div className="text-2xl font-bold text-gray-900 mt-2">{adminCount}</div>
+          <div className="text-xs text-gray-500 mt-1">All administrative accounts</div>
         </div>
-        <div className="stat-card rounded p-3">
-          <div style={{ fontSize: "12px", color: "#6f6653", fontWeight: "600" }}>Active</div>
-          <div style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f", marginTop: "4px" }}>{adminCount}</div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm font-semibold text-gray-700">Active</div>
+          <div className="text-2xl font-bold text-green-600 mt-2">{adminCount}</div>
+          <div className="text-xs text-gray-500 mt-1">Currently active admins</div>
         </div>
       </div>
 
-      {/* Table */}
       {admins.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "#6f6653" }}>
-          <div style={{ fontSize: "48px", opacity: 0.65, marginBottom: "16px" }}>👤</div>
-          <div style={{ fontSize: "16px", color: "#2f2a1f", fontWeight: "600", marginBottom: "8px" }}>No admins found</div>
-          <div style={{ fontSize: "14px" }}>Try adjusting your search filter</div>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-12 text-center">
+          <div className="text-4xl mb-4">👤</div>
+          <div className="text-lg font-semibold text-gray-900 mb-2">No admins found</div>
+          <div className="text-gray-600">Try adjusting your search filter</div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
-          <table className="data-table w-full text-sm" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#fff7da" }}>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Name</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Email</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Status</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Created</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Actions</th>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-yellow-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Name</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Email</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Status</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Created</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody>
               {admins.map((admin: any) => (
-                <tr key={admin.id} style={{ background: "white" }}>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", fontWeight: "600", color: "#2f2a1f" }}>{admin.name}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", color: "#6f6653" }}>{admin.email}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)" }}>
-                    <span className="status-badge status-active">Active</span>
+                <tr key={admin.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+                  <td className="px-6 py-4 font-semibold text-gray-900">{admin.name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{admin.email}</td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                      Active
+                    </span>
                   </td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", color: "#6f6653" }}>
-                    {new Date(admin.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)" }}>
+                  <td className="px-6 py-4 text-sm text-gray-600">{new Date(admin.created_at).toLocaleDateString()}</td>
+                  <td className="px-6 py-4">
                     <div className="flex gap-2 flex-wrap">
-                      <button className="btn-secondary px-3 py-1 rounded text-xs font-600" onClick={() => onEdit({ type: "admin", ...admin })}>
+                      <button className="px-3 py-1 bg-yellow-50 text-yellow-700 text-xs font-semibold rounded hover:bg-yellow-100 border border-yellow-200 transition-colors" onClick={() => onEdit({ type: "admin", ...admin })}>
                         Edit
                       </button>
-                      <button className="btn-danger px-3 py-1 rounded text-xs font-600" onClick={() => handleDeleteAdmin(admin.id)}>
+                      <button className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors" onClick={() => handleDeleteAdmin(admin.id)}>
                         Delete
                       </button>
                     </div>
@@ -306,77 +337,75 @@ function AdminRolesTab({ roles, allRoles, search, setSearch, onEdit, onRefresh }
   const dedicatedRoles = allRoles.filter((r: any) => r.is_dedicated_admin).length;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-7" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
-      <div className="mb-6 pb-4" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#2f2a1f", marginBottom: "6px" }}>Admin Roles</h2>
-        <p style={{ fontSize: "14px", color: "#6f6653" }}>Create and manage admin roles with configurable permissions</p>
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Admin Roles</h2>
+        <p className="text-sm text-gray-600">Create and manage admin roles with configurable permissions</p>
       </div>
 
-      {/* Search and Add */}
-      <div className="flex gap-3 mb-6 flex-wrap">
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
         <input
           type="text"
           placeholder="Search by role name..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="form-input flex-1 min-w-48 px-3 py-2 rounded text-sm"
-          style={{ paddingLeft: "40px", backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23b8860b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'%3E%3C/circle%3E%3Cpath d='m21 21-4.35-4.35'%3E%3C/path%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "12px center" }}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
         />
-        <button className="btn-primary px-4 py-2 rounded text-sm font-600" onClick={() => onEdit({ type: "role", id: null })}>
+        <button className="px-6 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm" onClick={() => onEdit({ type: "role", id: null })}>
           Add Role
         </button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="stat-card rounded p-3">
-          <div style={{ fontSize: "12px", color: "#6f6653", fontWeight: "600" }}>Total Roles</div>
-          <div style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f", marginTop: "4px" }}>{totalRoles}</div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm font-semibold text-gray-700">Total Roles</div>
+          <div className="text-2xl font-bold text-gray-900 mt-2">{totalRoles}</div>
+          <div className="text-xs text-gray-500 mt-1">Configured administrative roles</div>
         </div>
-        <div className="stat-card rounded p-3">
-          <div style={{ fontSize: "12px", color: "#6f6653", fontWeight: "600" }}>Dedicated Admin</div>
-          <div style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f", marginTop: "4px" }}>{dedicatedRoles}</div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm font-semibold text-gray-700">Dedicated Admin</div>
+          <div className="text-2xl font-bold text-green-600 mt-2">{dedicatedRoles}</div>
+          <div className="text-xs text-gray-500 mt-1">Roles reserved for specific admins</div>
         </div>
       </div>
 
-      {/* Table */}
       {roles.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "#6f6653" }}>
-          <div style={{ fontSize: "48px", opacity: 0.65, marginBottom: "16px" }}>🛡️</div>
-          <div style={{ fontSize: "16px", color: "#2f2a1f", fontWeight: "600", marginBottom: "8px" }}>No roles found</div>
-          <div style={{ fontSize: "14px" }}>Try adjusting your search filter</div>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-12 text-center">
+          <div className="text-4xl mb-4">🛡️</div>
+          <div className="text-lg font-semibold text-gray-900 mb-2">No roles found</div>
+          <div className="text-gray-600">Try adjusting your search filter</div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
-          <table className="data-table w-full text-sm" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#fff7da" }}>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Role Name</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Description</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Type</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Members</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Actions</th>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-yellow-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Role Name</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Description</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Type</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Members</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody>
               {roles.map((role: any) => (
-                <tr key={role.id} style={{ background: "white" }}>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", fontWeight: "600", color: "#2f2a1f" }}>{role.role_name}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", color: "#6f6653" }}>{role.description || "—"}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)" }}>
-                    <span className="status-badge" style={{ background: role.is_dedicated_admin ? "rgba(46, 158, 91, 0.10)" : "rgba(180, 145, 32, 0.10)", color: role.is_dedicated_admin ? "#2e9e5b" : "#b8860b" }}>
+                <tr key={role.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+                  <td className="px-6 py-4 font-semibold text-gray-900">{role.role_name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{role.description || "—"}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${role.is_dedicated_admin ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-800"}`}>
                       {role.is_dedicated_admin ? "Dedicated" : "Shared"}
                     </span>
                   </td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", color: "#6f6653" }}>
+                  <td className="px-6 py-4 text-sm text-gray-600">
                     {role.current_member_count ?? 0} / {role.max_members === 0 ? "∞" : role.max_members}
                   </td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)" }}>
+                  <td className="px-6 py-4">
                     <div className="flex gap-2 flex-wrap">
-                      <button className="btn-secondary px-3 py-1 rounded text-xs font-600" onClick={() => onEdit({ type: "role", ...role })}>
+                      <button className="px-3 py-1 bg-yellow-50 text-yellow-700 text-xs font-semibold rounded hover:bg-yellow-100 border border-yellow-200 transition-colors" onClick={() => onEdit({ type: "role", ...role })}>
                         Edit
                       </button>
-                      <button className="btn-danger px-3 py-1 rounded text-xs font-600" onClick={() => handleDeleteRole(role.id)}>
+                      <button className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors" onClick={() => handleDeleteRole(role.id)}>
                         Delete
                       </button>
                     </div>
@@ -391,51 +420,97 @@ function AdminRolesTab({ roles, allRoles, search, setSearch, onEdit, onRefresh }
   );
 }
 
-function ProtectedGroupsTab({ groups }: any) {
-  const memberCount = groups.reduce((sum: number, g: any) => sum + (g.member_count || 0), 0);
+function ProtectedGroupsTab({ groups, allGroups, search, setSearch, onEdit, onRefresh }: any) {
+  const memberCount = allGroups.reduce((sum: number, g: any) => sum + (g.member_count || 0), 0);
+
+  const handleDeleteGroup = async (groupId: string) => {
+    if (!confirm("Are you sure you want to delete this protected group?")) return;
+
+    try {
+      const response = await fetch(`/api/protected-groups/${groupId}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete protected group");
+      onRefresh();
+    } catch (err: any) {
+      alert("Error deleting group: " + err.message);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-7" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
-      <div className="mb-6 pb-4" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>
-        <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#2f2a1f", marginBottom: "6px" }}>Protected Groups</h2>
-        <p style={{ fontSize: "14px", color: "#6f6653" }}>View system-protected groups and their member counts</p>
+    <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6">
+      <div className="mb-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Protected Groups</h2>
+        <p className="text-sm text-gray-600">Create protected groups and manage their assigned members</p>
       </div>
 
-      {/* Stats */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <input
+          type="text"
+          placeholder="Search by group name or description..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+        />
+        <button
+          className="px-6 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors shadow-sm"
+          onClick={() => onEdit({ type: "protectedGroup", id: null, group_name: "", description: "", member_ids: [] })}
+        >
+          Add Group
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="stat-card rounded p-3">
-          <div style={{ fontSize: "12px", color: "#6f6653", fontWeight: "600" }}>Total Groups</div>
-          <div style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f", marginTop: "4px" }}>{groups.length}</div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm font-semibold text-gray-700">Total Groups</div>
+          <div className="text-2xl font-bold text-gray-900 mt-2">{allGroups.length}</div>
+          <div className="text-xs text-gray-500 mt-1">Protected groups in the directory</div>
         </div>
-        <div className="stat-card rounded p-3">
-          <div style={{ fontSize: "12px", color: "#6f6653", fontWeight: "600" }}>Total Members</div>
-          <div style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f", marginTop: "4px" }}>{memberCount}</div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className="text-sm font-semibold text-gray-700">Total Members</div>
+          <div className="text-2xl font-bold text-blue-600 mt-2">{memberCount}</div>
+          <div className="text-xs text-gray-500 mt-1">Assigned protected group members</div>
         </div>
       </div>
 
-      {/* Table */}
       {groups.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "#6f6653" }}>
-          <div style={{ fontSize: "48px", opacity: 0.65, marginBottom: "16px" }}>📁</div>
-          <div style={{ fontSize: "16px", color: "#2f2a1f", fontWeight: "600", marginBottom: "8px" }}>No protected groups found</div>
-          <div style={{ fontSize: "14px" }}>Protected groups are managed by the system</div>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-12 text-center">
+          <div className="text-4xl mb-4">📁</div>
+          <div className="text-lg font-semibold text-gray-900 mb-2">No protected groups found</div>
+          <div className="text-gray-600">Try adjusting your search filter or add a new group</div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded" style={{ border: "1px solid rgba(180, 145, 32, 0.16)" }}>
-          <table className="data-table w-full text-sm" style={{ borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: "#fff7da" }}>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Group Name</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Description</th>
-                <th className="px-4 py-3 text-left font-700 text-sm" style={{ color: "#2f2a1f", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>Members</th>
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-yellow-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Group Name</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Description</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Members</th>
+                <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Actions</th>
               </tr>
             </thead>
             <tbody>
               {groups.map((group: any) => (
-                <tr key={group.id} style={{ background: "white" }}>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", fontWeight: "600", color: "#2f2a1f" }}>{group.group_name}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", color: "#6f6653" }}>{group.description || "—"}</td>
-                  <td className="px-4 py-3" style={{ borderBottom: "1px solid rgba(180, 145, 32, 0.10)", color: "#6f6653", fontWeight: "600" }}>{group.member_count}</td>
+                <tr key={group.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+                  <td className="px-6 py-4 font-semibold text-gray-900">{group.group_name}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{group.description || "—"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600 font-semibold">{group.member_count}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        className="px-3 py-1 bg-yellow-50 text-yellow-700 text-xs font-semibold rounded hover:bg-yellow-100 border border-yellow-200 transition-colors"
+                        onClick={() => onEdit({
+                          type: "protectedGroup",
+                          ...group,
+                          member_ids: Array.isArray(group.members) ? group.members.map((member: any) => member.user_id) : [],
+                        })}
+                      >
+                        Edit
+                      </button>
+                      <button className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors" onClick={() => handleDeleteGroup(group.id)}>
+                        Delete
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -446,10 +521,16 @@ function ProtectedGroupsTab({ groups }: any) {
   );
 }
 
-function EditModal({ data, onClose, onRefresh }: any) {
+function EditModal({ data, availableUsers, onClose, onRefresh }: any) {
   const [formData, setFormData] = useState(data);
   const [loading, setLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
   const supabase = createClient();
+
+  const filteredAvailableUsers = availableUsers.filter((user: DirectoryUser) =>
+    user.name.toLowerCase().includes(userSearch.toLowerCase()) ||
+    user.email.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   const handleSave = async (e: any) => {
     e.preventDefault();
@@ -471,6 +552,21 @@ function EditModal({ data, onClose, onRefresh }: any) {
           const { error } = await supabase.from("admin_roles").insert([formData]);
           if (error) throw error;
         }
+      } else if (data.type === "protectedGroup") {
+        const response = await fetch(data.id ? `/api/protected-groups/${data.id}` : "/api/protected-groups", {
+          method: data.id ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            group_name: formData.group_name,
+            description: formData.description,
+            members: formData.member_ids || [],
+          }),
+        });
+
+        if (!response.ok) {
+          const result = await response.json().catch(() => null);
+          throw new Error(result?.error || "Failed to save protected group");
+        }
       }
       onRefresh();
       onClose();
@@ -482,93 +578,162 @@ function EditModal({ data, onClose, onRefresh }: any) {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", paddingBottom: "16px", borderBottom: "1px solid rgba(180, 145, 32, 0.22)" }}>
-          <h3 style={{ fontSize: "20px", fontWeight: "700", color: "#2f2a1f" }}>
-            {data.type === "admin" ? (data.id ? "Edit Admin" : "Add Admin") : (data.id ? "Edit Role" : "Add Role")}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className={`bg-white rounded-lg shadow-lg border border-gray-200 w-full ${data.type === "protectedGroup" ? "max-w-2xl" : "max-w-xl"}`} onClick={(e) => e.stopPropagation()}>
+        <div className="border-b border-gray-200 p-6 flex justify-between items-center">
+          <h3 className="text-2xl font-bold text-gray-900">
+            {data.type === "admin"
+              ? (data.id ? "Edit Admin" : "Add Admin")
+              : data.type === "role"
+                ? (data.id ? "Edit Role" : "Add Role")
+                : (data.id ? "Edit Group" : "Add Group")}
           </h3>
           <button
             onClick={onClose}
-            style={{ width: "32px", height: "32px", border: "none", background: "#fff6d8", borderRadius: "6px", cursor: "pointer", fontSize: "20px", color: "#b8860b" }}
+            className="w-8 h-8 rounded-md bg-yellow-50 text-yellow-700 hover:bg-yellow-100 text-2xl leading-none"
           >
             ×
           </button>
         </div>
 
-        <form onSubmit={handleSave}>
+        <form onSubmit={handleSave} className="p-6 space-y-5">
           {data.type === "admin" ? (
             <>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2f2a1f", marginBottom: "8px" }}>Name *</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
                 <input
                   type="text"
                   value={formData.name || ""}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="form-input w-full px-3 py-2 rounded text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   required
                 />
               </div>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2f2a1f", marginBottom: "8px" }}>Email *</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email *</label>
                 <input
                   type="email"
                   value={formData.email || ""}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="form-input w-full px-3 py-2 rounded text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   required
                 />
               </div>
             </>
-          ) : (
+          ) : data.type === "role" ? (
             <>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2f2a1f", marginBottom: "8px" }}>Role Name *</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Role Name *</label>
                 <input
                   type="text"
                   value={formData.role_name || ""}
                   onChange={(e) => setFormData({ ...formData, role_name: e.target.value })}
-                  className="form-input w-full px-3 py-2 rounded text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   required
                 />
               </div>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2f2a1f", marginBottom: "8px" }}>Description</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
                 <textarea
                   value={formData.description || ""}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="form-input w-full px-3 py-2 rounded text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   rows={3}
                 />
               </div>
-              <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px", padding: "12px", background: "rgba(244, 196, 48, 0.08)", border: "1px solid rgba(244, 196, 48, 0.18)", borderRadius: "6px" }}>
+              <div className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <input
                   type="checkbox"
                   checked={formData.is_dedicated_admin || false}
                   onChange={(e) => setFormData({ ...formData, is_dedicated_admin: e.target.checked })}
-                  style={{ width: "18px", height: "18px", cursor: "pointer", accentColor: "#f4c430" }}
+                  className="w-[18px] h-[18px] cursor-pointer accent-yellow-400"
                 />
-                <label style={{ fontSize: "14px", color: "#2f2a1f", cursor: "pointer", fontWeight: "500" }}>Dedicated Admin Role</label>
+                <label className="text-sm font-medium text-gray-900 cursor-pointer">Dedicated Admin Role</label>
               </div>
-              <div style={{ marginBottom: "16px" }}>
-                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2f2a1f", marginBottom: "8px" }}>Max Members</label>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Max Members</label>
                 <input
                   type="number"
                   value={formData.max_members || 0}
                   onChange={(e) => setFormData({ ...formData, max_members: parseInt(e.target.value) })}
-                  className="form-input w-full px-3 py-2 rounded text-sm"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   min="0"
                 />
-                <div style={{ fontSize: "12px", color: "#6f6653", marginTop: "4px" }}>0 means unlimited</div>
+                <div className="text-xs text-gray-500 mt-1">0 means unlimited</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Group Name *</label>
+                <input
+                  type="text"
+                  value={formData.group_name || ""}
+                  onChange={(e) => setFormData({ ...formData, group_name: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.description || ""}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Members</label>
+                <input
+                  type="text"
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search users by name or email..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 mb-3"
+                />
+                <div className="max-h-[220px] overflow-y-auto border border-gray-200 rounded-lg p-2 bg-yellow-50/40">
+                  {filteredAvailableUsers.length === 0 ? (
+                    <div className="text-sm text-gray-500 p-2">No users available</div>
+                  ) : (
+                    filteredAvailableUsers.map((user: DirectoryUser) => {
+                      const selected = Array.isArray(formData.member_ids) && formData.member_ids.includes(user.id);
+
+                      return (
+                        <label key={user.id} className="flex items-start gap-3 p-3 border-b border-gray-200 cursor-pointer hover:bg-white rounded-md">
+                          <input
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(e) => {
+                              const currentMembers = Array.isArray(formData.member_ids) ? formData.member_ids : [];
+                              const nextMembers = e.target.checked
+                                ? [...currentMembers, user.id]
+                                : currentMembers.filter((memberId: string) => memberId !== user.id);
+                              setFormData({ ...formData, member_ids: nextMembers });
+                            }}
+                            className="mt-1 w-4 h-4 accent-yellow-400"
+                          />
+                          <span>
+                            <span className="block text-sm font-semibold text-gray-900">{user.name}</span>
+                            <span className="block text-xs text-gray-500">{user.email}</span>
+                          </span>
+                        </label>
+                      );
+                    })
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  Selected members: {Array.isArray(formData.member_ids) ? formData.member_ids.length : 0}
+                </div>
               </div>
             </>
           )}
 
-          <div style={{ display: "flex", gap: "12px", marginTop: "24px", flexWrap: "wrap" }}>
-            <button type="submit" className="btn-primary px-4 py-2 rounded text-sm font-600" disabled={loading}>
+          <div className="flex gap-3 pt-4 border-t border-gray-200 flex-wrap">
+            <button type="submit" className="flex-1 px-4 py-2 bg-yellow-400 text-white font-semibold rounded-lg hover:bg-yellow-500 transition-colors disabled:opacity-50" disabled={loading}>
               {loading ? "Saving..." : "Save"}
             </button>
-            <button type="button" className="btn-secondary px-4 py-2 rounded text-sm font-600" onClick={onClose}>
+            <button type="button" className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors" onClick={onClose}>
               Cancel
             </button>
           </div>

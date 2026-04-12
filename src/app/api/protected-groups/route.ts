@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  normalizeProtectedGroupMembers,
+  serializeProtectedGroups,
+  serializeProtectedGroup,
+} from "@/lib/protected-groups";
+
 // GET /api/protected-groups
 export async function GET(_request: NextRequest) {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("protected_groups")
-      .select(`
-        id,
-        group_name,
-        description,
-        created_at,
-        updated_at
-      `)
+      .select("*")
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -22,7 +22,7 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    return NextResponse.json(data ?? []);
+    return NextResponse.json(await serializeProtectedGroups(data ?? []));
   } catch (error) {
     console.error("Error fetching protected groups:", error);
     return NextResponse.json(
@@ -35,10 +35,12 @@ export async function GET(_request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { group_name, description } = body;
+    const groupName = typeof body.group_name === "string" ? body.group_name.trim() : "";
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    const members = normalizeProtectedGroupMembers(body.members);
 
     // Validate required fields
-    if (!group_name) {
+    if (!groupName) {
       return NextResponse.json(
         { error: "Missing required field: group_name" },
         { status: 400 }
@@ -46,10 +48,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if group name already exists
-    const { data: existingGroup } = await supabase
+    const { data: existingGroup } = await supabaseAdmin
       .from("protected_groups")
       .select("id")
-      .eq("group_name", group_name)
+      .eq("group_name", groupName)
       .single();
 
     if (existingGroup) {
@@ -60,21 +62,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Create new protected group
-    const { data, error } = await supabase
+    const insertData: Record<string, unknown> = {
+      group_name: groupName,
+      description: description || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (body.members !== undefined) {
+      insertData.members = members;
+    }
+
+    const { data, error } = await supabaseAdmin
       .from("protected_groups")
-      .insert({
-        group_name,
-        description: description || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select(`
-        id,
-        group_name,
-        description,
-        created_at,
-        updated_at
-      `)
+      .insert(insertData)
+      .select("*")
       .single();
 
     if (error) {
@@ -85,7 +87,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json(await serializeProtectedGroup(data), { status: 201 });
   } catch (error) {
     console.error("Error creating protected group:", error);
     return NextResponse.json(

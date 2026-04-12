@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+    normalizeProtectedGroupMembers,
+    serializeProtectedGroup,
+} from "@/lib/protected-groups";
+
 // GET /api/protected-groups/[id]
 export async function GET(
     _request: NextRequest,
@@ -8,15 +13,9 @@ export async function GET(
     try {
         const { id } = await params;
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("protected_groups")
-            .select(`
-        id,
-        group_name,
-        description,
-        created_at,
-        updated_at
-      `)
+            .select("*")
             .eq("id", id)
             .single();
 
@@ -35,7 +34,7 @@ export async function GET(
             );
         }
 
-        return NextResponse.json(data);
+        return NextResponse.json(await serializeProtectedGroup(data));
     } catch (error) {
         console.error("Error fetching protected group:", error);
         return NextResponse.json(
@@ -59,9 +58,13 @@ export async function PATCH(
             updated_at: new Date().toISOString(),
         };
 
-        if (body.group_name !== undefined) updateData.group_name = body.group_name;
+        if (body.group_name !== undefined) updateData.group_name = String(body.group_name).trim();
         if (body.description !== undefined)
-            updateData.description = body.description || null;
+            updateData.description = String(body.description || "").trim() || null;
+        if (body.members !== undefined) {
+            const members = normalizeProtectedGroupMembers(body.members);
+            updateData.members = members;
+        }
 
         if (
             Object.keys(updateData).length === 1 &&
@@ -75,10 +78,10 @@ export async function PATCH(
 
         // Check if new group name already exists (if group_name is being updated)
         if (body.group_name) {
-            const { data: existingGroup } = await supabase
+            const { data: existingGroup } = await supabaseAdmin
                 .from("protected_groups")
                 .select("id")
-                .eq("group_name", body.group_name)
+                .eq("group_name", String(body.group_name).trim())
                 .neq("id", id)
                 .single();
 
@@ -90,17 +93,11 @@ export async function PATCH(
             }
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("protected_groups")
             .update(updateData)
             .eq("id", id)
-            .select(`
-        id,
-        group_name,
-        description,
-        created_at,
-        updated_at
-      `)
+            .select("*")
             .single();
 
         if (error) {
@@ -118,7 +115,7 @@ export async function PATCH(
             );
         }
 
-        return NextResponse.json(data);
+        return NextResponse.json(await serializeProtectedGroup(data));
     } catch (error) {
         console.error("Error updating protected group:", error);
         return NextResponse.json(
@@ -136,7 +133,7 @@ export async function DELETE(
         const { id } = await params;
 
         // Delete protected group
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
             .from("protected_groups")
             .delete()
             .eq("id", id);

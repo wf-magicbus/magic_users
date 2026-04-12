@@ -41,12 +41,15 @@ export async function GET(
         { status: 404 }
       );
     }
+    const adminRoles = Array.isArray(adminAccount.admin_roles)
+      ? adminAccount.admin_roles[0]
+      : adminAccount.admin_roles;
 
     return NextResponse.json({
       id: adminAccount.id,
       role_id: adminAccount.role_id,
-      role: adminAccount.admin_roles,
-      privileges: adminAccount.admin_roles?.privileges ?? [],
+      role: adminRoles,
+      privileges: adminRoles?.privileges ?? [],
     });
   } catch (error) {
     console.error("Error fetching admin privileges:", error);
@@ -109,11 +112,15 @@ export async function PATCH(
         );
       }
 
+      const updatedAdminRole = Array.isArray(updatedAdmin.admin_roles)
+        ? updatedAdmin.admin_roles[0]
+        : updatedAdmin.admin_roles;
+
       return NextResponse.json({
         id: updatedAdmin.id,
         role_id: updatedAdmin.role_id,
-        role: updatedAdmin.admin_roles,
-        privileges: updatedAdmin.admin_roles?.privileges ?? [],
+        role: updatedAdminRole,
+        privileges: updatedAdminRole?.privileges ?? [],
       });
     }
 
@@ -145,11 +152,15 @@ export async function PATCH(
       );
     }
 
+    const currentAdminRole = Array.isArray(currentAdmin.admin_roles)
+      ? currentAdmin.admin_roles[0]
+      : currentAdmin.admin_roles;
+
     return NextResponse.json({
       id: currentAdmin.id,
       role_id: currentAdmin.role_id,
-      role: currentAdmin.admin_roles,
-      privileges: currentAdmin.admin_roles?.privileges ?? [],
+      role: currentAdminRole,
+      privileges: currentAdminRole?.privileges ?? [],
     });
   } catch (error) {
     console.error("Error updating admin privileges:", error);

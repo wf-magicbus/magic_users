@@ -13,12 +13,10 @@ export async function GET(_request: NextRequest) {
         lockout_threshold_attempts,
         reset_counter_after_minutes,
         updated_at,
-        updated_by,
-        singleton,
+        updated_by,       
         gpo_object_id
       `)
-      .eq("singleton", true)
-      .single();
+
 
     if (error) {
       console.error("Supabase error:", error);

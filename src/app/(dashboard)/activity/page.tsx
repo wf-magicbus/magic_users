@@ -127,42 +127,22 @@ export default function ActivityPage() {
     );
   });
 
-  if (loading) return <div style={{ color: "#6f6653", padding: "32px" }}>Loading...</div>;
+  if (loading) return <div className="loading-text">Loading...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(180deg, #fffefb 0%, #fff8e8 100%)" }}>
-      <style>{`
-        .golden-tab { transition: all 0.2s ease; border: none; cursor: pointer; }
-        .golden-tab:hover { background: rgba(244, 196, 48, 0.12) !important; }
-        .form-input { border: 1px solid rgba(180, 145, 32, 0.22); background: white; transition: all 0.2s ease; }
-        .form-input:focus { outline: none; border-color: #f4c430; box-shadow: 0 0 0 3px rgba(244, 196, 48, 0.22); }
-        .btn-danger { background: #d64545; color: white; border: none; cursor: pointer; transition: all 0.2s ease; }
-        .btn-danger:hover:not(:disabled) { opacity: 0.88; }
-        .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-secondary { background: #fff6d4; color: #2f2a1f; border: 1px solid rgba(212, 160, 23, 0.2); cursor: pointer; transition: all 0.2s ease; }
-        .btn-secondary:hover { background: #ffefb5; }
-        .data-table thead { background: #fff7da; }
-        .data-table tbody tr { transition: background 0.15s ease; }
-        .data-table tbody tr:hover { background: #fffdf1; }
-        .stat-card { background: #fffaf0; border: 1px solid rgba(244, 196, 48, 0.18); }
-        .page-btn { padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid rgba(180, 145, 32, 0.22); background: white; color: #6f6653; transition: all 0.2s ease; }
-        .page-btn:hover:not(:disabled) { background: rgba(244, 196, 48, 0.12); }
-        .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .page-btn.active-page { background: #f4c430; color: white; border-color: #f4c430; }
-      `}</style>
-
-      <div className="bg-white border-b" style={{ borderColor: "rgba(180, 145, 32, 0.22)" }}>
+    <div className="page-container">
+      <div className="page-header">
         <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex items-center gap-3 mb-1">
-            <div style={{ width: "42px", height: "42px", background: "linear-gradient(135deg, #f4c430, #d4a017)", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "700", fontSize: "18px" }}>A</div>
-            <h1 style={{ fontSize: "24px", fontWeight: "700", color: "#2f2a1f" }}>Activity</h1>
+            <div className="page-header-icon">A</div>
+            <h1 className="page-title">Activity</h1>
           </div>
-          <p style={{ fontSize: "13px", color: "#6f6653", marginLeft: "54px" }}>Monitor active sessions and access log activity</p>
+          <p className="page-subtitle">Monitor active sessions and access log activity</p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-6">
-        <div className="bg-white rounded-lg p-2 shadow-sm mb-8" style={{ border: "1px solid rgba(180, 145, 32, 0.16)", display: "inline-flex", gap: "4px" }}>
+        <div className="tab-bar mb-8">
           {([SESSIONS_TAB, LOG_TAB] as Tab[]).map((tab) => (
             <button
               key={tab}

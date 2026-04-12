@@ -14,6 +14,12 @@ interface User {
   failed_attempts?: number;
 }
 
+interface RoleApiItem {
+  name: string;
+}
+
+type UserSavePayload = Partial<User> & { password?: string };
+
 export default function UsersPage() {
   const { loading: authLoading } = useAuthGuard();
   const [search, setSearch] = useState("");
@@ -24,6 +30,7 @@ export default function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [adminsCount, setAdminsCount] = useState<number | null>(null);
+  const [availableRoles, setAvailableRoles] = useState<string[]>([]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -48,6 +55,18 @@ export default function UsersPage() {
         .then((r) => r.json())
         .then((d) => setAdminsCount(d.admins?.length ?? d.length ?? 0))
         .catch(() => setAdminsCount(0));
+
+      fetch("/api/roles")
+        .then((r) => r.json())
+        .then((d) => {
+          const roleNames = Array.isArray(d?.roles)
+            ? d.roles
+              .map((role: RoleApiItem) => role?.name)
+              .filter((name: unknown): name is string => typeof name === "string" && name.length > 0)
+            : [];
+          setAvailableRoles(roleNames);
+        })
+        .catch(() => setAvailableRoles([]));
     }
   }, [authLoading, fetchUsers]);
 
@@ -62,11 +81,11 @@ export default function UsersPage() {
   }, [users, search, filterRole]);
 
   const uniqueRoles = useMemo(() => {
-    const roles = new Set(users.map((u) => u.role).filter(Boolean));
+    const roles = new Set(users.map((u) => u.role).filter(Boolean) as string[]);
     return Array.from(roles);
   }, [users]);
 
-  const handleSaveUser = async (userData: Partial<User>) => {
+  const handleSaveUser = async (userData: UserSavePayload) => {
     try {
       const method = editingUser ? "PUT" : "POST";
       const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
@@ -208,7 +227,7 @@ export default function UsersPage() {
               </thead>
               <tbody>
                 {filteredUsers.map((user) => (
-                  <tr key={user.user_id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+                  <tr key={user.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
                     <td className="px-6 py-4">
                       <span className="font-semibold text-gray-900">{user.name}</span>
                     </td>
@@ -260,7 +279,7 @@ export default function UsersPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDeleteUser(user.user_id)}
+                          onClick={() => handleDeleteUser(user.id)}
                           className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 border border-red-200 transition-colors"
                         >
                           Delete
@@ -278,6 +297,7 @@ export default function UsersPage() {
         {(editingUser || isCreating) && (
           <UserModal
             user={editingUser}
+            availableRoles={availableRoles}
             onClose={() => {
               setEditingUser(null);
               setIsCreating(false);
@@ -292,14 +312,16 @@ export default function UsersPage() {
 
 interface UserModalProps {
   user: User | null;
+  availableRoles: string[];
   onClose: () => void;
-  onSave: (data: Partial<User>) => void;
+  onSave: (data: UserSavePayload) => Promise<void>;
 }
 
-function UserModal({ user, onClose, onSave }: UserModalProps) {
+function UserModal({ user, availableRoles, onClose, onSave }: UserModalProps) {
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
+    password: "",
     role: user?.role || "",
     status: user?.status || "active",
   });
@@ -313,7 +335,16 @@ function UserModal({ user, onClose, onSave }: UserModalProps) {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await onSave(formData);
+      const payload: UserSavePayload = { ...formData };
+
+      if (user) {
+        delete payload.email;
+        if (!payload.password || payload.password.trim() === "") {
+          delete payload.password;
+        }
+      }
+
+      await onSave(payload);
     } finally {
       setIsSaving(false);
     }
@@ -359,8 +390,24 @@ function UserModal({ user, onClose, onSave }: UserModalProps) {
               type="email"
               value={formData.email}
               onChange={(e) => handleChange("email", e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              disabled={!!user}
+              className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 ${user
+                  ? "border-gray-200 bg-gray-100 text-gray-500 cursor-not-allowed"
+                  : "border-gray-300"
+                }`}
               required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Password {user ? "(optional for edit)" : ""}
+            </label>
+            <input
+              type="password"
+              value={formData.password}
+              onChange={(e) => handleChange("password", e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              required={!user}
             />
           </div>
 
@@ -369,13 +416,21 @@ function UserModal({ user, onClose, onSave }: UserModalProps) {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Role
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.role}
                 onChange={(e) => handleChange("role", e.target.value)}
-                placeholder="e.g., admin, user"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
-              />
+              >
+                <option value="">Select role</option>
+                {availableRoles.map((role) => (
+                  <option key={role} value={role}>
+                    {role}
+                  </option>
+                ))}
+                {formData.role && !availableRoles.includes(formData.role) && (
+                  <option value={formData.role}>{formData.role}</option>
+                )}
+              </select>
             </div>
 
             <div>
