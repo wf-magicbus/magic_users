@@ -18,7 +18,6 @@ export async function POST(
         name,
         status,
         role,
-        mfa_enabled,
         last_login,
         created_at
       `)

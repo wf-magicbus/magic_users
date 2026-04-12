@@ -9,7 +9,6 @@ interface User {
   email: string;
   status: "active" | "locked" | "disabled";
   role: string | null;
-  mfa_enabled: boolean;
   last_login: string | null;
   failed_attempts?: number;
 }
@@ -120,7 +119,6 @@ export default function UsersPage() {
 
   const activeCount = users.filter((u) => u.status === "active").length;
   const lockedCount = users.filter((u) => u.status === "locked").length;
-  const mfaCount = users.filter((u) => u.mfa_enabled).length;
 
   if (authLoading || isLoading) {
     return <div className="text-gray-500 text-center py-8">Loading...</div>;
@@ -161,11 +159,6 @@ export default function UsersPage() {
             <p className="text-sm font-semibold text-gray-700">Locked</p>
             <p className="text-2xl font-bold text-red-600 mt-2">{lockedCount}</p>
             <p className="text-xs text-gray-500 mt-1">Account locked</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-            <p className="text-sm font-semibold text-gray-700">MFA Enabled</p>
-            <p className="text-2xl font-bold text-blue-600 mt-2">{mfaCount}</p>
-            <p className="text-xs text-gray-500 mt-1">Two-factor enabled</p>
           </div>
         </div>
 
@@ -221,7 +214,6 @@ export default function UsersPage() {
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Role</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Status</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Last Login</th>
-                  <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">MFA</th>
                   <th className="px-6 py-4 text-left text-sm font-bold text-gray-900">Actions</th>
                 </tr>
               </thead>
@@ -261,14 +253,6 @@ export default function UsersPage() {
                       {user.last_login
                         ? new Date(user.last_login).toLocaleDateString()
                         : "—"}
-                    </td>
-                    <td className="px-6 py-4 text-sm">
-                      <span
-                        className={`font-semibold ${user.mfa_enabled ? "text-green-600" : "text-gray-400"
-                          }`}
-                      >
-                        {user.mfa_enabled ? "✓ Enabled" : "Disabled"}
-                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex gap-2">

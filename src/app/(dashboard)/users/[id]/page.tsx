@@ -50,12 +50,6 @@ export default function UserDetailPage() {
             <span className="font-medium text-gray-900">{user.role || "---"}</span>
           </div>
           <div>
-            <span className="text-gray-500">MFA:</span>{" "}
-            <span className={user.mfa_enabled ? "text-green-600 font-medium" : "text-gray-400"}>
-              {user.mfa_enabled ? "Enabled" : "Off"}
-            </span>
-          </div>
-          <div>
             <span className="text-gray-500">Last Login:</span>{" "}
             <span className="font-medium text-gray-900">{new Date(user.last_login).toLocaleString()}</span>
           </div>

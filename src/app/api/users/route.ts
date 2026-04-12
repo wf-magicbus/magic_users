@@ -6,7 +6,6 @@ type UserRow = {
   name: string | null;
   status: "active" | "locked" | "disabled" | null;
   role: string | null;
-  mfa_enabled: boolean | null;
   last_login: string | null;
   created_at?: string | null;
   failed_attempts?: number | null;
@@ -20,7 +19,6 @@ function serializeUser(row: UserRow, authUser?: { email?: string | null; last_si
     email: authUser?.email ?? "",
     status: row.status ?? "active",
     role: row.role,
-    mfa_enabled: row.mfa_enabled ?? false,
     last_login: row.last_login ?? authUser?.last_sign_in_at ?? null,
     failed_attempts: row.failed_attempts ?? 0,
     created_at: row.created_at ?? null,
@@ -46,7 +44,6 @@ export async function GET(request: NextRequest) {
           name,
           status,
           role,
-          mfa_enabled,
           last_login,
           created_at
         `,
@@ -112,7 +109,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, status, role, mfa_enabled } = body;
+    const { name, email, password, status, role } = body;
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -167,7 +164,6 @@ export async function POST(request: NextRequest) {
         name: trimmedName,
         status: status || "active",
         role: role || null,
-        mfa_enabled: mfa_enabled ?? false,
         last_login: null,
       })
       .select(`
@@ -175,7 +171,6 @@ export async function POST(request: NextRequest) {
         name,
         status,
         role,
-        mfa_enabled,
         last_login,
         created_at
       `)
@@ -196,7 +191,6 @@ export async function POST(request: NextRequest) {
         email: trimmedEmail,
         status: profileData?.status ?? "active",
         role: profileData?.role ?? null,
-        mfa_enabled: profileData?.mfa_enabled ?? false,
         last_login: profileData?.last_login ?? null,
         created_at: profileData?.created_at ?? null,
       },

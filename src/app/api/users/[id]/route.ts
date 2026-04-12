@@ -8,7 +8,6 @@ type UserRow = {
   email: string | null;
   status: "active" | "locked" | "disabled" | null;
   role: string | null;
-  mfa_enabled: boolean | null;
   last_login: string | null;
   created_at?: string | null;
   failed_attempts?: number | null;
@@ -17,16 +16,14 @@ type UserRow = {
     name: string | null;
     status: "active" | "locked" | "disabled" | null;
     role: string | null;
-    mfa_enabled: boolean | null;
-    last_login: string | null;
+      last_login: string | null;
     created_at?: string | null;
   } | {
     user_id: string;
     name: string | null;
     status: "active" | "locked" | "disabled" | null;
     role: string | null;
-    mfa_enabled: boolean | null;
-    last_login: string | null;
+      last_login: string | null;
     created_at?: string | null;
   }[] | null;
 };
@@ -45,7 +42,6 @@ function serializeUser(row: UserRow) {
     email: row.email ?? "",
     status: profile?.status ?? row.status ?? "active",
     role: profile?.role ?? row.role,
-    mfa_enabled: profile?.mfa_enabled ?? row.mfa_enabled ?? false,
     last_login: profile?.last_login ?? row.last_login,
     failed_attempts: row.failed_attempts ?? 0,
     created_at: profile?.created_at ?? row.created_at ?? null,
@@ -61,7 +57,6 @@ async function getSerializedUserById(id: string) {
       name,
       status,
       role,
-      mfa_enabled,
       last_login,
       created_at
     `)
@@ -88,7 +83,6 @@ async function getSerializedUserById(id: string) {
     email: authData.user?.email ?? null,
     status: profile.status,
     role: profile.role,
-    mfa_enabled: profile.mfa_enabled,
     last_login: profile.last_login ?? authData.user?.last_sign_in_at ?? null,
     created_at: profile.created_at ?? null,
     failed_attempts: 0,
@@ -97,7 +91,6 @@ async function getSerializedUserById(id: string) {
       name: profile.name,
       status: profile.status,
       role: profile.role,
-      mfa_enabled: profile.mfa_enabled,
       last_login: profile.last_login,
       created_at: profile.created_at ?? null,
     },
@@ -134,11 +127,7 @@ async function updateUser(request: NextRequest, paramsPromise: Promise<{ id: str
     usersUpdate.role = body.role || null;
     profileUpdate.role = body.role || null;
   }
-  if (body.mfa_enabled !== undefined) {
-    usersUpdate.mfa_enabled = body.mfa_enabled;
-    profileUpdate.mfa_enabled = body.mfa_enabled;
-  }
-  if (body.failed_attempts !== undefined) usersUpdate.failed_attempts = body.failed_attempts;
+if (body.failed_attempts !== undefined) usersUpdate.failed_attempts = body.failed_attempts;
 
   const password = typeof body.password === "string" ? body.password.trim() : "";
   const hasPasswordUpdate = password.length > 0;
