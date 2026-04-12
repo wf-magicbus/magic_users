@@ -6,7 +6,7 @@ import { useAuthGuard } from "@/lib/use-auth-guard";
 type Status = "idle" | "connecting" | "connected" | "disconnected" | "error";
 
 export default function TerminalPage() {
-  const { loading: authLoading } = useAuthGuard();
+  const { loading: authLoading } = useAuthGuard("access_terminal");
   const termRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<any>(null);
   const wsRef = useRef<WebSocket | null>(null);

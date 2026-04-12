@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { hasPrivilege } from "@/lib/use-auth-guard";
+
+type AdminSession = { role: string; privileges: string[] };
 
 const navSections = [
   {
@@ -82,6 +86,7 @@ const navSections = [
         href: "/network",
         label: "Network",
         soon: false,
+        requiredPrivilege: "access_network",
         icon: (
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-[18px] h-[18px]">
             <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
@@ -92,6 +97,7 @@ const navSections = [
         href: "/terminal",
         label: "Terminal",
         soon: false,
+        requiredPrivilege: "access_terminal",
         icon: (
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-[18px] h-[18px]">
             <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
@@ -105,6 +111,14 @@ const navSections = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [adminSession, setAdminSession] = useState<AdminSession | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("admin_session");
+      if (stored) setAdminSession(JSON.parse(stored));
+    } catch { /* ignore */ }
+  }, []);
 
   async function handleLogout() {
     const supabase = await createClient();
@@ -138,7 +152,12 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto">
-        {navSections.map((section) => (
+        {navSections.map((section) => {
+          const visibleItems = section.items.filter((item) =>
+            !item.requiredPrivilege || hasPrivilege(adminSession, item.requiredPrivilege)
+          );
+          if (visibleItems.length === 0) return null;
+          return (
           <div key={section.label}>
             <div
               className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.12em]"
@@ -147,7 +166,7 @@ export default function Sidebar() {
               {section.label}
             </div>
             <div className="space-y-0.5">
-              {section.items.map((item) => {
+              {visibleItems.map((item) => {
                 const isActive =
                   pathname === item.href ||
                   (item.href !== "/" && pathname.startsWith(item.href));
@@ -192,7 +211,8 @@ export default function Sidebar() {
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Footer */}

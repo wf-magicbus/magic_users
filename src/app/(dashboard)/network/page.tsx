@@ -501,7 +501,7 @@ function RoutesTab() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function NetworkPage() {
-  const { loading } = useAuthGuard();
+  const { loading } = useAuthGuard("access_network");
   const [activeTab, setActiveTab] = useState<Tab>("Nodes");
 
   if (loading) return (
