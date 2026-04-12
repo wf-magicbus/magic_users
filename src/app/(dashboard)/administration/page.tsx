@@ -630,7 +630,7 @@ function EditModal({ data, availableUsers, adminRoles, onClose, onRefresh }: any
                   required
                 >
                   <option value="">— Select admin type —</option>
-                  {(adminRoles || []).map((role: AdminRole) => (
+                  {(adminRoles || []).filter((role: AdminRole) => role.role_name !== "student").map((role: AdminRole) => (
                     <option key={role.id} value={role.id}>
                       {role.role_name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
                       {role.description ? ` — ${role.description}` : ""}
