@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+:root {
+  --gold: #f4c430;
+}
+
 /* ============================================
    LAYOUT & CONTAINERS
    ============================================ */
@@ -959,19 +963,3 @@
    GLOBAL CLICKABLE HOVER OVERRIDE
    ============================================ */
 
-button:hover:not(:disabled),
-a:hover,
-[role="button"]:hover,
-input[type="button"]:hover:not(:disabled),
-input[type="submit"]:hover:not(:disabled),
-.btn:hover:not(:disabled),
-.tab-button:hover:not(:disabled),
-.policy-nav-item:hover:not(:disabled),
-.url-filter-btn:hover:not(:disabled),
-.url-filter-btn-edit:hover:not(:disabled),
-.url-filter-btn-delete:hover:not(:disabled),
-.toggle-switch:hover:not(:disabled) {
-  background: #d64545 !important;
-  color: #ffffff !important;
-  border-color: #d64545 !important;
-}
