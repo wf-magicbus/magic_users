@@ -309,10 +309,13 @@ function PolicyForm({ policy, values, onChange }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
+type AdminRoleInfra = { role_name: string; access_terminal: boolean; access_network: boolean };
+
 export default function RolesPage() {
-  const { loading: authLoading } = useAuthGuard();
+  const { loading: authLoading, adminSession } = useAuthGuard();
   const [roles, setRoles] = useState<Role[]>([]);
   const [policyTables, setPolicyTables] = useState<string[]>([]);
+  const [adminRolesInfra, setAdminRolesInfra] = useState<Record<string, AdminRoleInfra>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [newRole, setNewRole] = useState("");
@@ -324,12 +327,24 @@ export default function RolesPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
+  const isSuperAdmin = adminSession?.role === "super_admin";
+
   const fetchRoles = async () => {
     setLoading(true);
-    const res = await fetch("/api/roles");
-    const data = await res.json();
-    setRoles(data.roles ?? []);
-    setPolicyTables(data.policyTables ?? []);
+    const [rolesRes, infraRes] = await Promise.all([
+      fetch("/api/roles"),
+      fetch("/api/roles/infra"),
+    ]);
+    const rolesData = await rolesRes.json();
+    setRoles(rolesData.roles ?? []);
+    setPolicyTables(rolesData.policyTables ?? []);
+
+    if (infraRes.ok) {
+      const infraData: AdminRoleInfra[] = await infraRes.json();
+      const map: Record<string, AdminRoleInfra> = {};
+      for (const r of infraData) map[r.role_name] = r;
+      setAdminRolesInfra(map);
+    }
     setLoading(false);
   };
 
@@ -419,6 +434,19 @@ export default function RolesPage() {
       body: JSON.stringify({ name }),
     });
     await fetchRoles();
+  };
+
+  const toggleInfra = async (roleName: string, field: "access_terminal" | "access_network") => {
+    const current = adminRolesInfra[roleName];
+    if (!current) return; // not an admin role — no-op
+    const newValue = !current[field];
+    setAdminRolesInfra((prev) => ({
+      ...prev,
+      [roleName]: { ...prev[roleName], [field]: newValue },
+    }));
+    await fetch(`/api/roles/infra?role=${encodeURIComponent(roleName)}&field=${field}&value=${newValue}`, {
+      method: "PATCH",
+    });
   };
 
   if (authLoading) return null;
@@ -635,6 +663,73 @@ export default function RolesPage() {
                         })}
                       </tr>
                     ))}
+
+                    {/* Infrastructure access rows — super_admin only */}
+                    {isSuperAdmin && (
+                      <>
+                        {(["access_terminal", "access_network"] as const).map((field) => {
+                          const label = field === "access_terminal" ? "Terminal Access" : "Network Access";
+                          const icon  = field === "access_terminal" ? "🖥️" : "🌐";
+                          return (
+                            <tr key={field} style={{ background: "rgba(244, 196, 48, 0.04)" }}>
+                              <td style={{ padding: "14px 16px", borderBottom: "1px solid rgba(180, 145, 32, 0.10)", borderTop: "2px solid rgba(180, 145, 32, 0.22)" }}>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base">{icon}</span>
+                                  <div>
+                                    <span className="text-sm font-medium" style={{ color: "#2f2a1f" }}>{label}</span>
+                                    <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded font-semibold" style={{ background: "rgba(244, 196, 48, 0.25)", color: "#92700a" }}>
+                                      Super Admin
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              {filteredRoles.map((role) => {
+                                const infra = adminRolesInfra[role.name];
+                                const isAdminRole = !!infra;
+                                const active = isAdminRole && infra[field];
+                                return (
+                                  <td
+                                    key={role.name}
+                                    onClick={() => isAdminRole && toggleInfra(role.name, field)}
+                                    title={!isAdminRole ? "Not an admin role" : active ? "Click to revoke" : "Click to grant"}
+                                    style={{
+                                      background: active ? "rgba(244, 196, 48, 0.12)" : "#ffffff",
+                                      borderBottom: "1px solid rgba(180, 145, 32, 0.10)",
+                                      borderTop: "2px solid rgba(180, 145, 32, 0.22)",
+                                      textAlign: "center",
+                                      padding: "14px 16px",
+                                      cursor: isAdminRole ? "pointer" : "not-allowed",
+                                      opacity: isAdminRole ? 1 : 0.35,
+                                      transition: "all 0.12s",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (isAdminRole) (e.currentTarget as HTMLElement).style.background = active ? "rgba(244, 196, 48, 0.2)" : "rgba(244, 196, 48, 0.06)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (isAdminRole) (e.currentTarget as HTMLElement).style.background = active ? "rgba(244, 196, 48, 0.12)" : "#ffffff";
+                                    }}
+                                  >
+                                    {!isAdminRole ? (
+                                      <span style={{ color: "#bbb", fontSize: 12 }}>—</span>
+                                    ) : active ? (
+                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full" style={{ background: "#f4c430" }}>
+                                        <svg viewBox="0 0 12 12" fill="none" className="w-3 h-3">
+                                          <path d="M2 6l3 3 5-5" stroke="#2f2a1f" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full" style={{ background: "rgba(180, 145, 32, 0.10)", border: "1px solid rgba(180, 145, 32, 0.22)" }}>
+                                        <span style={{ color: "#6f6653", fontSize: 10 }}>+</span>
+                                      </span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          );
+                        })}
+                      </>
+                    )}
                   </tbody>
                 </table>
 

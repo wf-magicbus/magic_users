@@ -49,10 +49,10 @@ export default function LoginPage() {
         return;
       }
 
-      // 3. Check if admin has dashboard-level privileges (super_admin role check)
+      // 3. Fetch role info including infrastructure access flags
       const { data: adminRole } = await supabase
         .from("admin_roles")
-        .select("role_name")
+        .select("role_name, access_terminal, access_network")
         .eq("id", adminAccount.role_id)
         .single();
 
@@ -70,6 +70,15 @@ export default function LoginPage() {
         return;
       }
 
+      // Merge individual privileges with role-level infra access
+      const privilegeKeys = privileges.map((p: { privilege_key: string }) => p.privilege_key);
+      if (adminRole?.access_terminal && !privilegeKeys.includes("access_terminal")) {
+        privilegeKeys.push("access_terminal");
+      }
+      if (adminRole?.access_network && !privilegeKeys.includes("access_network")) {
+        privilegeKeys.push("access_network");
+      }
+
       // Store admin info in localStorage for dashboard use
       localStorage.setItem(
         "admin_session",
@@ -77,7 +86,7 @@ export default function LoginPage() {
           user_id: userId,
           admin_id: adminAccount.id,
           role: adminRole?.role_name || "unknown",
-          privileges: privileges.map((p: { privilege_key: string }) => p.privilege_key),
+          privileges: privilegeKeys,
         })
       );
 
