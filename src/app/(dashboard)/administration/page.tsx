@@ -212,6 +212,7 @@ export default function AdministrationPage() {
         <EditModal
           data={editData}
           availableUsers={availableUsers}
+          adminRoles={adminRoles}
           onClose={() => setEditData(null)}
           onRefresh={editData.type === "admin" ? fetchAdmins : editData.type === "role" ? fetchAdminRoles : fetchProtectedGroups}
         />
@@ -226,7 +227,7 @@ function AdminAccountsTab({ admins, allAdmins, search, setSearch, onEdit, onRefr
   const handleDeleteAdmin = async (adminId: string) => {
     if (!confirm("Are you sure you want to delete this admin?")) return;
     try {
-      const { error: err } = await supabase.from("admins").delete().eq("id", adminId);
+      const { error: err } = await supabase.from("admin_accounts").delete().eq("id", adminId);
       if (err) throw err;
       onRefresh();
     } catch (err: any) {
@@ -521,7 +522,7 @@ function ProtectedGroupsTab({ groups, allGroups, search, setSearch, onEdit, onRe
   );
 }
 
-function EditModal({ data, availableUsers, onClose, onRefresh }: any) {
+function EditModal({ data, availableUsers, adminRoles, onClose, onRefresh }: any) {
   const [formData, setFormData] = useState(data);
   const [loading, setLoading] = useState(false);
   const [userSearch, setUserSearch] = useState("");
@@ -537,11 +538,12 @@ function EditModal({ data, availableUsers, onClose, onRefresh }: any) {
     setLoading(true);
     try {
       if (data.type === "admin") {
+        const payload = { name: formData.name, email: formData.email, role_id: formData.role_id || null };
         if (data.id) {
-          const { error } = await supabase.from("admins").update(formData).eq("id", data.id);
+          const { error } = await supabase.from("admin_accounts").update(payload).eq("id", data.id);
           if (error) throw error;
         } else {
-          const { error } = await supabase.from("admins").insert([formData]);
+          const { error } = await supabase.from("admin_accounts").insert([payload]);
           if (error) throw error;
         }
       } else if (data.type === "role") {
@@ -618,6 +620,23 @@ function EditModal({ data, availableUsers, onClose, onRefresh }: any) {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
                   required
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Admin Type *</label>
+                <select
+                  value={formData.role_id || ""}
+                  onChange={(e) => setFormData({ ...formData, role_id: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  required
+                >
+                  <option value="">— Select admin type —</option>
+                  {(adminRoles || []).map((role: AdminRole) => (
+                    <option key={role.id} value={role.id}>
+                      {role.role_name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                      {role.description ? ` — ${role.description}` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
             </>
           ) : data.type === "role" ? (
