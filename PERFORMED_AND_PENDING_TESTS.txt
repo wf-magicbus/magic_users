@@ -26,7 +26,7 @@ Date: 2026-04-20
    npm run test:api
  - Tests run the mock server automatically and validate the endpoints listed above.
 
-4) Pending tests (must be performed on staging with real Supabase and Next server)
+4) Pending tests (must be performed on staging with real Supabase and Next server) - should be done in Customer laptop
 - Integration tests (must-run against staging `API_BASE`):
   - AUTH-001 through AUTH-006: real login/logout/session expiry, token refresh, sign-out, client tampering vs server rejection.
   - ORG-001, ORG-002, ORG-003: tenant isolation for lists, by-ID access, and verification that every server query applies `eq('org_id', userOrgId)`.
