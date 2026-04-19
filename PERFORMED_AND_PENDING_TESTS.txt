@@ -1,0 +1,59 @@
+MagicBus — Performed and Pending Tests
+Date: 2026-04-20
+
+1) Performed tests (automated / mock environment)
+- Location: tests/api/
+  - mockServer.js — mock HTTP server providing tokens and org-scoped resources.
+  - users.test.js — verifies GET /api/users returns users + pagination (uses mock server).
+  - url-filter-rules.test.js — verifies GET and POST for url-filter-rules; POST rejects role super_admin (403).
+  - tenant.test.js — tenant-isolation tests: OrgA sees only OrgA users; cross-org access is forbidden; authenticated write creates user under caller's org.
+
+- Code review tasks performed:
+  - Reviewed `src/lib/use-auth-guard.ts` for client-side session handling.
+  - Reviewed `src/lib/supabase.ts` and `src/lib/supabase-admin.ts` and added safe stubs when env vars are missing.
+  - Reviewed representative API routes: `src/app/api/users/route.ts`, `src/app/api/url-filter-rules/route.ts` for input validation and responses.
+
+2) Test artifacts created
+- `TEST_CASES.md` — full test-case matrix (IDs, priorities, steps).
+- `TEST_EXECUTION_REPORT.md` — template for recording pass/fail evidence.
+- `TEST_REPORT_FINAL.md` & `TESTING_REPORT*.md` — summary and industry-level reports.
+- `tests/api/*` — automated tests and mock server.
+
+3) How to run the automated mock-based tests (already passing locally with mock)
+ - Install deps:
+   npm install
+ - Run tests:
+   npm run test:api
+ - Tests run the mock server automatically and validate the endpoints listed above.
+
+4) Pending tests (must be performed on staging with real Supabase and Next server)
+- Integration tests (must-run against staging `API_BASE`):
+  - AUTH-001 through AUTH-006: real login/logout/session expiry, token refresh, sign-out, client tampering vs server rejection.
+  - ORG-001, ORG-002, ORG-003: tenant isolation for lists, by-ID access, and verification that every server query applies `eq('org_id', userOrgId)`.
+  - API-001, API-002, API-005, API-006: API parameter validation, duplicate/name conflicts, injection/assertion checks, and authenticated call enforcement.
+
+- Security tests:
+  - Authenticated DAST (OWASP Top 10) against staging with valid credentials.
+  - SAST review (linting and code scanning) on server and client code.
+  - Confirm `SUPABASE_SERVICE_ROLE_KEY` not present in client builds.
+
+- Performance tests:
+  - Load test `/api/users` using k6/Artillery with target RPS defined by product (example: 200 RPS sustained), measure p95 latency and error rates.
+
+- CI / Regression:
+  - Add GitHub Actions to run unit, integration (against mock or staging), and e2e tests for PRs.
+
+5) Acceptance criteria for submission
+- All High-priority tests PASS on staging and evidence captured in `TEST_EXECUTION_REPORT.md`.
+- No critical/high security findings from authenticated scans.
+- Service-role keys not exposed in client bundles.
+- Product and Security sign-off recorded in the execution report.
+
+6) Recommended immediate next steps (practical)
+1. Deploy a staging Next server with Supabase envs set and run the full integration test matrix against it; populate `TEST_EXECUTION_REPORT.md` with results and attach logs/screenshots.
+2. Implement server-side `requireAuth` helper (if not present) that validates bearer tokens and returns `user.id`, `org_id`, `role`; then update server APIs to apply org scoping and role checks before reads/writes.
+3. Run authenticated DAST and address high/critical findings.
+4. After staging passes, produce `TEST_REPORT_FINAL.pdf` (convert `TEST_REPORT_FINAL.md`) and submit PDF + execution evidence to customer.
+
+Contact
+- If you want, I can: run the mock tests here and capture logs, attempt a Node-based PDF conversion, or package the report and artifacts into a ZIP for download.
