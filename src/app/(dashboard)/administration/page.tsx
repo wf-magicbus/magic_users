@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import { useAuthGuard } from "@/lib/use-auth-guard";
 import { createClient } from "@/lib/supabase/client";
 
-const tabs = ["👤 Admin Accounts", "🛡️ Admin Roles", "📁 Protected Groups"] as const;
+const tabs = ["👤 Admin Accounts", "🛡️ Admin Roles"] as const;
+//const tabs = ["👤 Admin Accounts", "🛡️ Admin Roles", "📁 Protected Groups"] as const;
 type Tab = (typeof tabs)[number];
 
 interface Admin {
