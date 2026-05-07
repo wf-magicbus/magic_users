@@ -53,8 +53,8 @@ function StatusDot({ online }: { online: boolean }) {
     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
       style={online
         ? { background: "#F0FDF4", color: "#15803D" }
-        : { background: "var(--silver-50)", color: "var(--text-3)" }}>
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: online ? "#22C55E" : "var(--silver)" }} />
+        : { background: "#f4f5f6", color: "#9ca3af" }}>
+      <span className="w-1.5 h-1.5 rounded-full" style={{ background: online ? "#22C55E" : "#cbd5e1" }} />
       {online ? "Online" : "Offline"}
     </span>
   );
@@ -78,13 +78,24 @@ function DangerBtn({ onClick, children }: { onClick: () => void; children: React
   );
 }
 
+function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
+  return (
+    <button type="button" onClick={onToggle}
+      className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+      style={{ background: enabled ? "#f4c430" : "#cbd5e1" }}>
+      <span className="inline-block w-4 h-4 rounded-full bg-white shadow transition-transform"
+        style={{ transform: enabled ? "translateX(24px)" : "translateX(4px)" }} />
+    </button>
+  );
+}
+
 function ModalOverlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div ref={ref} className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.45)", backdropFilter: "blur(2px)" }}
+      style={{ background: "rgba(71,56,8,0.28)", backdropFilter: "blur(2px)" }}
       onClick={e => { if (e.target === ref.current) onClose(); }}>
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-lg border overflow-hidden" style={{ borderColor: "rgba(180,145,32,0.16)" }}>
         {children}
       </div>
     </div>
@@ -135,7 +146,7 @@ function NodesTab() {
         empty={filtered.length === 0}
         action={
           <div className="relative w-72">
-            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--text-3)" }}>
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
             </svg>
             <input type="text" placeholder="Search nodes…" value={search} onChange={e => setSearch(e.target.value)}
@@ -149,26 +160,26 @@ function NodesTab() {
             <tr key={node.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
               <td className="px-6 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: online ? "#F0FDF4" : "var(--silver-50)" }}>
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" style={{ color: online ? "#15803D" : "var(--silver)" }}>
+                  <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: online ? "#F0FDF4" : "#f4f5f6" }}>
+                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" style={{ color: online ? "#15803D" : "#cbd5e1" }}>
                       <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>{node.name}</div>
-                    <div className="text-xs font-mono" style={{ color: "var(--text-3)" }}>{node.id}</div>
+                    <div className="text-sm font-semibold text-gray-900">{node.name}</div>
+                    <div className="text-xs font-mono text-gray-400">{node.id}</div>
                   </div>
                 </div>
               </td>
               <td className="px-6 py-4">
                 <div className="space-y-0.5">
                   {(node.ipAddresses ?? []).map((ip: string) => (
-                    <div key={ip} className="text-xs font-mono px-2 py-0.5 rounded w-fit" style={{ background: "var(--sky-50)", color: "var(--sky-dark)" }}>{ip}</div>
+                    <div key={ip} className="text-xs font-mono px-2 py-0.5 rounded w-fit bg-blue-50 text-blue-700">{ip}</div>
                   ))}
                 </div>
               </td>
-              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{node.user?.name ?? "—"}</td>
-              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>
+              <td className="px-6 py-4 text-sm text-gray-600">{node.user?.name ?? "—"}</td>
+              <td className="px-6 py-4 text-sm text-gray-600">
                 {lastSeen ? lastSeen.toLocaleString() : "—"}
               </td>
               <td className="px-6 py-4"><StatusDot online={online} /></td>
@@ -229,30 +240,27 @@ function UsersTab() {
     <div>
       {showAdd && (
         <ModalOverlay onClose={() => setShowAdd(false)}>
-          <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
-            <h2 className="text-base font-bold" style={{ color: "var(--text-1)" }}>Create Headscale User</h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>Username used for issuing pre-auth keys</p>
+          <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(180,145,32,0.16)" }}>
+            <h2 className="text-base font-bold text-gray-900">Create Headscale User</h2>
+            <p className="text-xs mt-0.5 text-gray-500">Username used for issuing pre-auth keys</p>
           </div>
           <form onSubmit={addUser} className="px-6 py-5 space-y-4">
             <div>
-              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-3)" }}>Username</label>
+              <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-gray-500">Username</label>
               <input type="text" placeholder="e.g. alice" value={newName} onChange={e => setNewName(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all"
-                style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)", color: "var(--text-1)" }}
-                onFocus={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--crimson)"}
-                onBlur={e => (e.currentTarget as HTMLElement).style.borderColor = "var(--border-strong)"}
+                className="w-full px-3 py-2.5 rounded-xl text-sm outline-none transition-all bg-white border border-gray-300 text-gray-900 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100"
                 autoFocus />
             </div>
-            {error && <div className="text-sm px-3 py-2 rounded-xl" style={{ background: "var(--crimson-50)", color: "var(--crimson)" }}>{error}</div>}
+            {error && <div className="text-sm px-3 py-2 rounded-xl bg-red-50 text-red-600">{error}</div>}
             <div className="flex gap-3">
-              <button type="button" onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border-strong)" }}>Cancel</button>
-              <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--crimson)" }}>{saving ? "Creating…" : "Create"}</button>
+              <button type="button" onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors">Cancel</button>
+              <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 bg-yellow-400 hover:bg-yellow-500 transition-colors">{saving ? "Creating…" : "Create"}</button>
             </div>
           </form>
         </ModalOverlay>
       )}
       <div className="flex items-center justify-between mb-4">
-        <span className="text-sm" style={{ color: "var(--text-2)" }}>{users.length} user{users.length !== 1 ? "s" : ""}</span>
+        <span className="text-sm text-gray-600">{users.length} user{users.length !== 1 ? "s" : ""}</span>
         <CrimsonBtn onClick={() => setShowAdd(true)}>
           <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>
           Add User
@@ -260,18 +268,16 @@ function UsersTab() {
       </div>
       <TableShell headers={["Username", "Created", "Actions"]} empty={users.length === 0}>
         {users.map((user, i) => (
-          <tr key={user.id} className="transition-colors" style={{ borderBottom: i < users.length - 1 ? "1px solid var(--border)" : "none" }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+          <tr key={user.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
             <td className="px-6 py-4">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold" style={{ background: "var(--sky-50)", color: "var(--sky-dark)" }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-bold bg-blue-50 text-blue-700">
                   {user.name?.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>{user.name}</span>
+                <span className="text-sm font-semibold text-gray-900">{user.name}</span>
               </div>
             </td>
-            <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}</td>
+            <td className="px-6 py-4 text-sm text-gray-600">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"}</td>
             <td className="px-6 py-4"><DangerBtn onClick={() => deleteUser(user.name)}>Delete</DangerBtn></td>
           </tr>
         ))}
@@ -330,50 +336,44 @@ function PreAuthKeysTab() {
     <div>
       {showCreate && (
         <ModalOverlay onClose={() => { setShowCreate(false); setNewKey(""); }}>
-          <div className="px-6 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
-            <h2 className="text-base font-bold" style={{ color: "var(--text-1)" }}>Create Pre-Auth Key</h2>
-            <p className="text-xs mt-0.5" style={{ color: "var(--text-3)" }}>For user: <strong>{selectedUser}</strong></p>
+          <div className="px-6 py-4" style={{ borderBottom: "1px solid rgba(180,145,32,0.16)" }}>
+            <h2 className="text-base font-bold text-gray-900">Create Pre-Auth Key</h2>
+            <p className="text-xs mt-0.5 text-gray-500">For user: <strong>{selectedUser}</strong></p>
           </div>
           <div className="px-6 py-5">
             {newKey ? (
               <div className="space-y-4">
-                <div className="rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-                  <p className="text-xs font-semibold mb-2" style={{ color: "var(--text-3)" }}>KEY — copy now, it won't be shown again</p>
-                  <code className="text-xs font-mono break-all" style={{ color: "var(--crimson)" }}>{newKey}</code>
+                <div className="rounded-xl p-3 bg-yellow-50 border border-yellow-200">
+                  <p className="text-xs font-semibold mb-2 text-gray-500">KEY — copy now, it won't be shown again</p>
+                  <code className="text-xs font-mono break-all text-yellow-700">{newKey}</code>
                 </div>
                 <button onClick={() => { navigator.clipboard.writeText(newKey); }}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white" style={{ background: "var(--crimson)" }}>
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-yellow-400 hover:bg-yellow-500 transition-colors">
                   Copy Key
                 </button>
                 <button onClick={() => { setShowCreate(false); setNewKey(""); }}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border-strong)" }}>
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors">
                   Done
                 </button>
               </div>
             ) : (
               <form onSubmit={createKey} className="space-y-4">
-                <div className="space-y-3 rounded-xl px-3 py-3" style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <div className="space-y-3 rounded-xl px-3 py-3 bg-gray-50 border border-gray-200">
                   {[["reusable", "Reusable"], ["ephemeral", "Ephemeral (node deleted when offline)"]].map(([key, label]) => (
                     <div key={key} className="flex items-center justify-between">
-                      <span className="text-sm" style={{ color: "var(--text-1)" }}>{label}</span>
-                      <button type="button" onClick={() => setForm(f => ({ ...f, [key]: !(f as any)[key] }))}
-                        className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
-                        style={{ background: (form as any)[key] ? "var(--crimson)" : "var(--silver)" }}>
-                        <span className="inline-block rounded-full bg-white shadow-sm transition-transform"
-                          style={{ width: 14, height: 14, transform: (form as any)[key] ? "translateX(18px)" : "translateX(2px)" }} />
-                      </button>
+                      <span className="text-sm text-gray-900">{label}</span>
+                      <ToggleSwitch enabled={(form as any)[key]} onToggle={() => setForm(f => ({ ...f, [key]: !(f as any)[key] }))} />
                     </div>
                   ))}
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider" style={{ color: "var(--text-3)" }}>Expiry (optional)</label>
+                  <label className="block text-xs font-semibold mb-1.5 uppercase tracking-wider text-gray-500">Expiry (optional)</label>
                   <input type="datetime-local" value={form.expiry} onChange={e => setForm(f => ({ ...f, expiry: e.target.value }))}
-                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                    style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)", color: "var(--text-1)" }} />
+                    className="w-full px-3 py-2.5 rounded-xl text-sm outline-none bg-white border border-gray-300 text-gray-900 focus:border-yellow-400 focus:ring-2 focus:ring-yellow-100" />
                 </div>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold" style={{ background: "var(--surface-2)", color: "var(--text-2)", border: "1px solid var(--border-strong)" }}>Cancel</button>
-                  <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60" style={{ background: "var(--crimson)" }}>{saving ? "Creating…" : "Create"}</button>
+                  <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 border border-gray-200 hover:bg-gray-200 transition-colors">Cancel</button>
+                  <button type="submit" disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white disabled:opacity-60 bg-yellow-400 hover:bg-yellow-500 transition-colors">{saving ? "Creating…" : "Create"}</button>
                 </div>
               </form>
             )}
@@ -383,10 +383,9 @@ function PreAuthKeysTab() {
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "var(--text-3)" }}>User</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">User</span>
           <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)}
-            className="px-3 py-2 text-sm rounded-xl outline-none"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border-strong)", color: "var(--text-1)" }}>
+            className="px-3 py-2 text-sm rounded-xl outline-none bg-white border border-gray-300 text-gray-900">
             {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
           </select>
         </div>
@@ -399,26 +398,24 @@ function PreAuthKeysTab() {
       {loading ? <Spinner /> : (
         <TableShell headers={["Key", "Reusable", "Ephemeral", "Used", "Expires", "Actions"]} empty={keys.length === 0}>
           {keys.map((k, i) => (
-            <tr key={k.key} className="transition-colors" style={{ borderBottom: i < keys.length - 1 ? "1px solid var(--border)" : "none" }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+            <tr key={k.key} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
               <td className="px-6 py-4">
-                <code className="text-xs font-mono" style={{ color: k.used ? "var(--text-3)" : "var(--crimson)" }}>
+                <code className="text-xs font-mono" style={{ color: k.used ? "#9ca3af" : "#d4a017" }}>
                   {k.key?.slice(0, 20)}…
                 </code>
               </td>
               <td className="px-6 py-4">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={k.reusable ? { background: "var(--sky-50)", color: "var(--sky-dark)" } : { background: "var(--silver-50)", color: "var(--text-3)" }}>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={k.reusable ? { background: "#eff6ff", color: "#1d4ed8" } : { background: "#f4f5f6", color: "#9ca3af" }}>
                   {k.reusable ? "Yes" : "No"}
                 </span>
               </td>
               <td className="px-6 py-4">
-                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={k.ephemeral ? { background: "var(--gold-50)", color: "var(--gold-dark)" } : { background: "var(--silver-50)", color: "var(--text-3)" }}>
+                <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={k.ephemeral ? { background: "#fffbeb", color: "#b45309" } : { background: "#f4f5f6", color: "#9ca3af" }}>
                   {k.ephemeral ? "Yes" : "No"}
                 </span>
               </td>
-              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{k.used ? "Yes" : "No"}</td>
-              <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>
+              <td className="px-6 py-4 text-sm text-gray-600">{k.used ? "Yes" : "No"}</td>
+              <td className="px-6 py-4 text-sm text-gray-600">
                 {k.expiration && k.expiration !== "0001-01-01T00:00:00Z" ? new Date(k.expiration).toLocaleDateString() : "Never"}
               </td>
               <td className="px-6 py-4">
@@ -461,35 +458,32 @@ function RoutesTab() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <button onClick={fetch_} className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
-          style={{ background: "var(--sky-50)", color: "var(--sky-dark)" }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--sky-100)"}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "var(--sky-50)"}>
+        <button onClick={fetch_} className="text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors bg-blue-50 text-blue-700"
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "#dbeafe"}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "#eff6ff"}>
           Refresh
         </button>
       </div>
       <TableShell headers={["Prefix", "Node", "Advertised", "Enabled", "Primary", "Actions"]} empty={routes.length === 0}>
         {routes.map((route, i) => (
-          <tr key={route.id} className="transition-colors" style={{ borderBottom: i < routes.length - 1 ? "1px solid var(--border)" : "none" }}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = "var(--surface-2)"}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}>
+          <tr key={route.id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
             <td className="px-6 py-4">
-              <code className="text-xs font-mono px-2 py-1 rounded" style={{ background: "var(--sky-50)", color: "var(--sky-dark)" }}>{route.prefix}</code>
+              <code className="text-xs font-mono px-2 py-1 rounded bg-blue-50 text-blue-700">{route.prefix}</code>
             </td>
-            <td className="px-6 py-4 text-sm" style={{ color: "var(--text-2)" }}>{route.node?.name ?? "—"}</td>
+            <td className="px-6 py-4 text-sm text-gray-600">{route.node?.name ?? "—"}</td>
             <td className="px-6 py-4">
-              <span className="text-xs font-semibold" style={{ color: route.advertised ? "#15803D" : "var(--text-3)" }}>{route.advertised ? "Yes" : "No"}</span>
+              <span className="text-xs font-semibold" style={{ color: route.advertised ? "#15803D" : "#9ca3af" }}>{route.advertised ? "Yes" : "No"}</span>
             </td>
             <td className="px-6 py-4">
               <button onClick={() => toggleRoute(route.id, route.enabled)}
                 className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
-                style={{ background: route.enabled ? "var(--crimson)" : "var(--silver)" }}>
+                style={{ background: route.enabled ? "#f4c430" : "#cbd5e1" }}>
                 <span className="inline-block rounded-full bg-white shadow-sm transition-transform"
                   style={{ width: 14, height: 14, transform: route.enabled ? "translateX(18px)" : "translateX(2px)" }} />
               </button>
             </td>
             <td className="px-6 py-4">
-              <span className="text-xs font-semibold" style={{ color: route.isPrimary ? "var(--sky-dark)" : "var(--text-3)" }}>{route.isPrimary ? "Yes" : "No"}</span>
+              <span className="text-xs font-semibold" style={{ color: route.isPrimary ? "#1d4ed8" : "#9ca3af" }}>{route.isPrimary ? "Yes" : "No"}</span>
             </td>
             <td className="px-6 py-4"><DangerBtn onClick={() => deleteRoute(route.id)}>Delete</DangerBtn></td>
           </tr>
@@ -506,7 +500,7 @@ export default function NetworkPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--crimson)", borderTopColor: "transparent" }} />
+      <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#f4c430", borderTopColor: "transparent" }} />
     </div>
   );
 
