@@ -142,9 +142,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: trimmedEmail,
       password: String(password),
+      email_confirm: true,
     });
 
     if (authError || !authData.user) {

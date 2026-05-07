@@ -117,7 +117,7 @@ export default function DashboardPage() {
               ) : recentUsers.map((user, i) => {
                 const s = statusStyles[user.status] || statusStyles.disabled;
                 return (
-                  <tr key={user.user_id} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
+                  <tr key={user.user_id ?? i} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold flex-shrink-0"
