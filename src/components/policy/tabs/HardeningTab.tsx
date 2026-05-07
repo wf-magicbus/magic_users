@@ -89,7 +89,19 @@ export default function HardeningTab() {
     } finally { setSaving(false); }
   };
 
-  const data = editing ? form : policy;
+  const data = editing ? form : policy as HardeningPolicy | null;
+  if (!data) return (
+    <div className="max-w-3xl">
+      <RolePicker active={role} onChange={handleRoleChange} />
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--crimson)", borderTopColor: "transparent" }} />
+        </div>
+      ) : role ? (
+        <p className="text-sm text-center py-12" style={{ color: "var(--text-3)" }}>No hardening policy found for this role.</p>
+      ) : null}
+    </div>
+  );
 
   return (
     <div className="max-w-3xl">

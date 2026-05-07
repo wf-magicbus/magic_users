@@ -6,9 +6,17 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { hasPrivilege } from "@/lib/use-auth-guard";
 
-type AdminSession = { role: string; privileges: string[] };
+type AdminSession = { user_id: string; admin_id: string; role: string; privileges: string[] };
 
-const navSections = [
+interface NavItem {
+  href: string;
+  label: string;
+  soon: boolean;
+  requiredPrivilege?: string;
+  icon: React.ReactNode;
+}
+
+const navSections: { label: string; items: NavItem[] }[] = [
   {
     label: "Overview",
     items: [
