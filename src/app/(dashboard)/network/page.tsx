@@ -400,16 +400,9 @@ function PreAuthKeysTab() {
           {keys.map((k, i) => (
             <tr key={k.key} className="border-b border-gray-100 hover:bg-yellow-50 transition-colors">
               <td className="px-6 py-4">
-                <div className="flex items-center gap-2">
-                  <code className="text-xs font-mono" style={{ color: k.used ? "#9ca3af" : "#d4a017" }}>
-                    {k.key?.slice(0, 20)}…
-                  </code>
-                  <button onClick={() => navigator.clipboard.writeText(k.key)}
-                    className="px-2 py-1 text-xs font-semibold rounded bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 transition-colors"
-                    title="Copy full key">
-                    Copy
-                  </button>
-                </div>
+                <code className="text-xs font-mono" style={{ color: k.used ? "#9ca3af" : "#d4a017" }}>
+                  {k.key}
+                </code>
               </td>
               <td className="px-6 py-4">
                 <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={k.reusable ? { background: "#eff6ff", color: "#1d4ed8" } : { background: "#f4f5f6", color: "#9ca3af" }}>
